@@ -1,0 +1,108 @@
+/* Applications Page Specific Styles */
+
+/* Documents Breakdown */
+.status-breakdown {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.status-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.status-asked {
+    background-color: #e3f2fd;
+    color: #1976d2;
+}
+
+.status-pending {
+    background-color: #fff3e0;
+    color: #f57c00;
+}
+
+.status-received {
+    background-color: #e8f5e9;
+    color: #388e3c;
+}
+
+/* Application Status */
+.app-status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.app-inprogress {
+    background-color: #fff3e0;
+    color: #e65100;
+}
+
+.app-completed {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+}
+
+/* Submission Status */
+.submission-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.sub-draft {
+    background-color: #f5f5f5;
+    color: #616161;
+}
+
+.sub-reviewed {
+    background-color: #e3f2fd;
+    color: #1565c0;
+}
+
+.sub-signoff {
+    background-color: #fce4ec;
+    color: #c2185b;
+}
+
+.sub-submitted {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+}
+
+/* Make the table more responsive with smaller columns */
+.applications-table th,
+.applications-table td {
+    padding: 10px 8px;
+    font-size: 13px;
+}
+
+/* Adjust documents column width */
+.documents-info {
+    min-width: 140px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1400px) {
+    .status-breakdown {
+        flex-direction: column;
+        gap: 4px;
+    }
+    
+    .status-item {
+        font-size: 11px;
+        padding: 2px 6px;
+    }
+}

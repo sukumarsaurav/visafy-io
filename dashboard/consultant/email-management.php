@@ -368,8 +368,8 @@ $queue_stats = $conn->query($queue_stats_query)->fetch_assoc();
                 
                 <div class="form-actions">
                     <button type="button" class="btn cancel-btn" id="cancelBtn">Cancel</button>
-                    <button type="button" class="btn ai-btn" id="aiGenerateBtn">
-                        <i class="fas fa-magic"></i> AI Generate
+                    <button type="button" class="btn secondary-btn" id="previewBtn">
+                        <i class="fas fa-eye"></i> Preview
                     </button>
                     <button type="submit" class="btn submit-btn">Save Template</button>
                 </div>
@@ -478,37 +478,27 @@ $queue_stats = $conn->query($queue_stats_query)->fetch_assoc();
     </div>
 </div>
 
-<!-- AI Template Generator Modal -->
-<div id="aiGeneratorModal" class="modal">
-    <div class="modal-content">
+<!-- Full Preview Modal -->
+<div id="fullPreviewModal" class="modal">
+    <div class="modal-content large-modal">
         <div class="modal-header">
-            <h2>AI Email Generator</h2>
+            <h2>Email Template Preview</h2>
             <span class="close">&times;</span>
         </div>
         <div class="modal-body">
-            <p class="modal-description">Describe the email template you want to create, and our AI assistant will generate it for you.</p>
-            
-            <div class="form-group">
-                <label for="aiPrompt">Describe your email template*</label>
-                <textarea id="aiPrompt" class="form-control" rows="4" placeholder="Example: Generate an HTML email template for booking confirmation with logo at top, confirmation details in the middle, and contact information in the footer."></textarea>
+            <div class="preview-tabs">
+                <button type="button" class="preview-tab-btn active" data-view="desktop"><i class="fas fa-desktop"></i> Desktop</button>
+                <button type="button" class="preview-tab-btn" data-view="tablet"><i class="fas fa-tablet-alt"></i> Tablet</button>
+                <button type="button" class="preview-tab-btn" data-view="mobile"><i class="fas fa-mobile-alt"></i> Mobile</button>
             </div>
-            
-            <div class="form-group">
-                <label for="aiSubject">Email Subject*</label>
-                <input type="text" id="aiSubject" class="form-control" placeholder="Example: Your booking confirmation">
+            <div class="full-preview-container">
+                <div id="fullPreviewFrame" class="full-preview-frame desktop">
+                    <div id="fullPreviewContent" class="full-preview-content"></div>
+                </div>
             </div>
-            
-            <div class="form-actions">
-                <button type="button" class="btn cancel-btn" id="cancelAiBtn">Cancel</button>
-                <button type="button" class="btn submit-btn" id="generateBtn">
-                    <i class="fas fa-magic"></i> Generate Template
-                </button>
-            </div>
-            
-            <div id="aiLoader" class="ai-loader" style="display: none;">
-                <div class="spinner"></div>
-                <p>Generating your template...</p>
-            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn secondary-btn" id="closeFullPreviewBtn">Close</button>
         </div>
     </div>
 </div>
@@ -889,15 +879,6 @@ $queue_stats = $conn->query($queue_stats_query)->fetch_assoc();
     background-color: #c82333;
 }
 
-.ai-btn {
-    background-color: #6f42c1;
-    color: white;
-}
-
-.ai-btn:hover {
-    background-color: #5a32a3;
-}
-
 /* Editor Styles */
 .editor-tools {
     display: flex;
@@ -1160,29 +1141,65 @@ $queue_stats = $conn->query($queue_stats_query)->fetch_assoc();
     word-break: break-word;
 }
 
-/* AI Loader */
-.ai-loader {
+/* Full Preview Modal Styles */
+.preview-tabs {
     display: flex;
-    flex-direction: column;
-    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
     justify-content: center;
+}
+
+.preview-tab-btn {
+    padding: 10px 20px;
+    border: 1px solid var(--border-color);
+    background: #f8f9fc;
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.preview-tab-btn.active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.full-preview-container {
+    display: flex;
+    justify-content: center;
+    background: #e9ecef;
     padding: 20px;
-    margin-top: 20px;
+    border-radius: 8px;
+    min-height: 500px;
 }
 
-.spinner {
-    border: 4px solid rgba(0, 0, 0, 0.1);
-    border-left-color: #6f42c1;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    animation: spin 1s linear infinite;
-    margin-bottom: 15px;
+.full-preview-frame {
+    background: white;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    transition: width 0.3s ease;
+    overflow: auto;
+    max-height: 600px;
 }
 
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+.full-preview-frame.desktop {
+    width: 100%;
+    max-width: 800px;
+}
+
+.full-preview-frame.tablet {
+    width: 768px;
+}
+
+.full-preview-frame.mobile {
+    width: 375px;
+}
+
+.full-preview-content {
+    padding: 20px;
 }
 
 /* Responsive Adjustments */
@@ -1217,7 +1234,7 @@ $queue_stats = $conn->query($queue_stats_query)->fetch_assoc();
 document.addEventListener('DOMContentLoaded', function() {
     // Modal handling
     const modals = document.querySelectorAll('.modal');
-    const modalClosers = document.querySelectorAll('.close, #cancelBtn, #closePreviewBtn, #cancelTestBtn, #cancelAiBtn, #cancelDeleteBtn');
+    const modalClosers = document.querySelectorAll('.close, #cancelBtn, #closePreviewBtn, #cancelTestBtn, #cancelDeleteBtn, #closeFullPreviewBtn');
     
     // Open modal function
     function openModal(modalId) {
@@ -1265,6 +1282,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const editor = document.getElementById('editor');
     const htmlEditor = document.getElementById('html_editor');
     const contentTextarea = document.getElementById('template_content');
+    const editorTools = document.querySelector('.editor-tools');
     
     editorTabs.forEach(tab => {
         tab.addEventListener('click', function() {
@@ -1272,21 +1290,24 @@ document.addEventListener('DOMContentLoaded', function() {
             editorTabs.forEach(t => t.classList.remove('active'));
             this.classList.add('active');
             
-            // Show/hide appropriate editor
+            // Show/hide appropriate editor and toolbar
             if (this.dataset.tab === 'visual') {
                 editor.style.display = 'block';
                 htmlEditor.style.display = 'none';
-                // Update HTML editor content
-                htmlEditor.value = editor.innerHTML;
+                if (editorTools) editorTools.style.display = 'flex';
+                // Sync from HTML editor
+                editor.innerHTML = htmlEditor.value;
             } else {
                 editor.style.display = 'none';
                 htmlEditor.style.display = 'block';
-                // Update visual editor content
-                editor.innerHTML = htmlEditor.value;
+                if (editorTools) editorTools.style.display = 'none';
+                // Sync from visual editor
+                htmlEditor.value = editor.innerHTML;
             }
             
-            // Update content textarea
+            // Update content textarea and preview
             contentTextarea.value = editor.innerHTML;
+            document.getElementById('emailPreview').innerHTML = editor.innerHTML;
         });
     });
     
@@ -1538,66 +1559,126 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // AI Generate button
-    document.getElementById('aiGenerateBtn').addEventListener('click', function() {
-        document.getElementById('aiPrompt').value = '';
-        document.getElementById('aiSubject').value = document.getElementById('template_subject').value || '';
-        document.getElementById('aiLoader').style.display = 'none';
-        openModal('aiGeneratorModal');
+    // Visual Editor Toolbar Functionality
+    const toolButtons = document.querySelectorAll('.tool-btn[data-command]');
+    const colorPicker = document.getElementById('colorPicker');
+    const headingSelect = document.querySelector('.heading-select');
+    
+    // Focus the editor for keyboard commands
+    function focusEditor() {
+        document.getElementById('editor').focus();
+    }
+    
+    // Update preview and hidden textarea
+    function updateEditorContent() {
+        const editorContent = document.getElementById('editor').innerHTML;
+        document.getElementById('template_content').value = editorContent;
+        document.getElementById('emailPreview').innerHTML = editorContent;
+    }
+    
+    // Tool button click handlers
+    toolButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const command = this.dataset.command;
+            
+            switch(command) {
+                case 'createLink':
+                    const url = prompt('Enter the URL:');
+                    if (url) {
+                        document.execCommand('createLink', false, url);
+                    }
+                    break;
+                case 'insertImage':
+                    const imgUrl = prompt('Enter the image URL:');
+                    if (imgUrl) {
+                        document.execCommand('insertImage', false, imgUrl);
+                    }
+                    break;
+                case 'insertVariable':
+                    // Show variable picker or insert a default
+                    const variable = prompt('Enter variable name (e.g., first_name, email, booking_date):');
+                    if (variable) {
+                        document.execCommand('insertText', false, '{' + variable + '}');
+                    }
+                    break;
+                default:
+                    document.execCommand(command, false, null);
+            }
+            focusEditor();
+            updateEditorContent();
+        });
     });
     
-    // Generate AI template button
-    document.getElementById('generateBtn').addEventListener('click', function() {
-        const prompt = document.getElementById('aiPrompt').value;
-        const subject = document.getElementById('aiSubject').value;
-        
-        if (!prompt) {
-            alert('Please describe what kind of template you want to generate.');
-            return;
-        }
-        
-        // Show loader
-        document.getElementById('aiLoader').style.display = 'flex';
-        
-        // Construct a detailed prompt with the subject
-        const fullPrompt = `Generate an HTML email template for ${subject ? 'email with subject "' + subject + '"' : 'general email'}: ${prompt}. The template should use responsive design and include placeholders like {first_name}, {email}, etc. where appropriate.`;
-        
-        // Call AI template generator API
-        fetch('ajax/generate_email_template.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ prompt: fullPrompt })
-        })
-        .then(response => response.json())
-        .then(data => {
-            // Hide loader
-            document.getElementById('aiLoader').style.display = 'none';
-            
-            if (data.success) {
-                // Update the editor with generated template
-                editor.innerHTML = data.template;
-                contentTextarea.value = data.template;
-                document.getElementById('emailPreview').innerHTML = data.template;
-                
-                // Set the subject if provided
-                if (subject) {
-                    document.getElementById('template_subject').value = subject;
-                }
-                
-                // Close AI modal and show editor
-                closeAllModals();
-                openModal('templateEditorModal');
+    // Color picker handler
+    if (colorPicker) {
+        colorPicker.addEventListener('change', function() {
+            document.execCommand('foreColor', false, this.value);
+            focusEditor();
+            updateEditorContent();
+        });
+    }
+    
+    // Heading select handler
+    if (headingSelect) {
+        headingSelect.addEventListener('change', function() {
+            const heading = this.value;
+            if (heading) {
+                document.execCommand('formatBlock', false, '<' + heading + '>');
             } else {
-                alert('Error generating template: ' + data.error);
+                document.execCommand('formatBlock', false, '<p>');
             }
-        })
-        .catch(error => {
-            // Hide loader
-            document.getElementById('aiLoader').style.display = 'none';
-            console.error('Error generating template:', error);
-            alert('Error connecting to AI service. Please try again later.');
+            focusEditor();
+            updateEditorContent();
+        });
+    }
+    
+    // Variable tag click handlers
+    document.querySelectorAll('.variable-tag').forEach(tag => {
+        tag.addEventListener('click', function() {
+            const variable = this.dataset.variable;
+            document.getElementById('editor').focus();
+            document.execCommand('insertText', false, variable);
+            updateEditorContent();
+        });
+    });
+    
+    // Editor input event for real-time preview
+    document.getElementById('editor').addEventListener('input', function() {
+        updateEditorContent();
+    });
+    
+    // Full Preview Button (in template editor modal)
+    const previewBtn = document.getElementById('previewBtn');
+    if (previewBtn) {
+        previewBtn.addEventListener('click', function() {
+            // Get current editor content
+            const currentContent = document.getElementById('editor').innerHTML || document.getElementById('html_editor').value;
+            
+            // Update full preview modal
+            document.getElementById('fullPreviewContent').innerHTML = currentContent;
+            
+            // Reset to desktop view
+            document.getElementById('fullPreviewFrame').className = 'full-preview-frame desktop';
+            document.querySelectorAll('.preview-tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelector('.preview-tab-btn[data-view="desktop"]').classList.add('active');
+            
+            openModal('fullPreviewModal');
+        });
+    }
+    
+    // Preview tabs for responsive views
+    document.querySelectorAll('.preview-tab-btn').forEach(tabBtn => {
+        tabBtn.addEventListener('click', function() {
+            const view = this.dataset.view;
+            const previewFrame = document.getElementById('fullPreviewFrame');
+            
+            // Update active tab
+            document.querySelectorAll('.preview-tab-btn').forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Update preview frame class
+            previewFrame.className = 'full-preview-frame ' + view;
         });
     });
 
