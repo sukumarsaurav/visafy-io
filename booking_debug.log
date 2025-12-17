@@ -1,0 +1,16 @@
+2025-08-03 07:47:56 - POST Data: Array
+(
+    [consultant_id] => 15
+    [organization_id] => 6
+    [visa_service_id] => 2
+    [consultation_mode] => Chat
+    [booking_date] => 2025-08-05
+    [booking_time] => 09:00
+    [duration_minutes] => 60
+    [client_notes] => 
+    [terms] => on
+    [user_id] => 0
+    [consultation_mode_id] => 4
+)
+
+2025-08-03 07:47:57 - Error: User not logged in

@@ -1,0 +1,602 @@
+[18-May-2025 11:22:55 UTC] Organization ID from session: 4
+[18-May-2025 11:22:55 UTC] GET request data: Array
+(
+    [id] => 7
+)
+
+[18-May-2025 11:22:55 UTC] Template ID from request: 7
+[18-May-2025 11:22:55 UTC] Executing query: SELECT et.*, CONCAT(u.first_name, ' ', u.last_name) as created_by_name 
+              FROM email_templates et
+              JOIN users u ON et.created_by = u.id
+              WHERE et.id = ? AND (et.organization_id = ? OR et.is_global = 1)
+[18-May-2025 11:22:55 UTC] Query parameters - template_id: 7, organization_id: 4
+[18-May-2025 11:22:55 UTC] Query result: Array
+(
+    [id] => 7
+    [name] => booking confirmation mail
+    [subject] => your booking confirmation
+    [content] => <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="text-align: center; margin-bottom: 30px;">
+        <img src="https://visafy.io/assets/images/logo-Visafy-light.png" alt="Visafy Logo" style="max-width: 200px;">
+    </div>
+    
+    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 20px;">
+        <h2 style="color: #042167; margin-top: 0;">{subject}</h2>
+        <p>Dear {first_name},</p>
+        <p>This is a sample email template generated based on your requirements. You can customize this template further using the editor.</p>
+        <p>Best regards,<br>Visafy Team</p>
+    </div>
+    
+    <div style="text-align: center; color: #6c757d; font-size: 12px; margin-top: 30px;">
+        <p>This email was sent to {email}</p>
+        <p>© 2025 Visafy. All rights reserved.</p>
+    </div>
+</div>
+    [template_type] => general
+    [organization_id] => 4
+    [is_global] => 0
+    [created_by] => 11
+    [created_at] => 2025-05-18 11:19:05
+    [updated_at] => 2025-05-18 11:19:05
+    [created_by_name] => sukumar Saurav
+)
+
+[18-May-2025 11:23:15 UTC] Organization ID from session: 4
+[18-May-2025 11:23:15 UTC] GET request data: Array
+(
+    [id] => 7
+)
+
+[18-May-2025 11:23:15 UTC] Template ID from request: 7
+[18-May-2025 11:23:15 UTC] Executing query: SELECT et.*, CONCAT(u.first_name, ' ', u.last_name) as created_by_name 
+              FROM email_templates et
+              JOIN users u ON et.created_by = u.id
+              WHERE et.id = ? AND (et.organization_id = ? OR et.is_global = 1)
+[18-May-2025 11:23:15 UTC] Query parameters - template_id: 7, organization_id: 4
+[18-May-2025 11:23:15 UTC] Query result: Array
+(
+    [id] => 7
+    [name] => booking confirmation mail
+    [subject] => your booking confirmation
+    [content] => <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="text-align: center; margin-bottom: 30px;">
+        <img src="https://visafy.io/assets/images/logo-Visafy-light.png" alt="Visafy Logo" style="max-width: 200px;">
+    </div>
+    
+    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 20px;">
+        <h2 style="color: #042167; margin-top: 0;">{subject}</h2>
+        <p>Dear {first_name},</p>
+        <p>This is a sample email template generated based on your requirements. You can customize this template further using the editor.</p>
+        <p>Best regards,<br>Visafy Team</p>
+    </div>
+    
+    <div style="text-align: center; color: #6c757d; font-size: 12px; margin-top: 30px;">
+        <p>This email was sent to {email}</p>
+        <p>© 2025 Visafy. All rights reserved.</p>
+    </div>
+</div>
+    [template_type] => general
+    [organization_id] => 4
+    [is_global] => 0
+    [created_by] => 11
+    [created_at] => 2025-05-18 11:19:05
+    [updated_at] => 2025-05-18 11:22:36
+    [created_by_name] => sukumar Saurav
+)
+
+[18-May-2025 11:25:12 UTC] Organization ID from session: 4
+[18-May-2025 11:25:12 UTC] GET request data: Array
+(
+    [id] => 6
+)
+
+[18-May-2025 11:25:12 UTC] Template ID from request: 6
+[18-May-2025 11:25:12 UTC] Executing query: SELECT et.*, CONCAT(u.first_name, ' ', u.last_name) as created_by_name 
+              FROM email_templates et
+              JOIN users u ON et.created_by = u.id
+              WHERE et.id = ? AND (et.organization_id = ? OR et.is_global = 1)
+[18-May-2025 11:25:12 UTC] Query parameters - template_id: 6, organization_id: 4
+[18-May-2025 11:25:12 UTC] Query result: Array
+(
+    [id] => 6
+    [name] => booking confirmation mail
+    [subject] => Thank you for  immigration consultation booking with visafybooking with visafy
+    [content] => <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="text-align: center; margin-bottom: 30px;">
+        <img src="https://visafy.io/logo.png" alt="Visafy Logo" style="max-width: 200px;">
+    </div>
+    
+    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 20px;">
+        <h2 style="color: #042167; margin-top: 0;">{subject}</h2>
+        <p>Dear {first_name},</p>
+        <p>This is a sample email template generated based on your requirements. You can customize this template further using the editor.</p>
+        <p>Best regards,<br>Visafy Team</p>
+    </div>
+    
+    <div style="text-align: center; color: #6c757d; font-size: 12px; margin-top: 30px;">
+        <p>This email was sent to {email}</p>
+        <p>© 2025 Visafy. All rights reserved.</p>
+    </div>
+</div>
+    [template_type] => booking_confirmation
+    [organization_id] => 4
+    [is_global] => 0
+    [created_by] => 11
+    [created_at] => 2025-05-18 10:48:35
+    [updated_at] => 2025-05-18 10:48:35
+    [created_by_name] => sukumar Saurav
+)
+
+[18-May-2025 11:25:20 UTC] Organization ID from session: 4
+[18-May-2025 11:25:21 UTC] GET request data: Array
+(
+    [id] => 7
+)
+
+[18-May-2025 11:25:21 UTC] Template ID from request: 7
+[18-May-2025 11:25:21 UTC] Executing query: SELECT et.*, CONCAT(u.first_name, ' ', u.last_name) as created_by_name 
+              FROM email_templates et
+              JOIN users u ON et.created_by = u.id
+              WHERE et.id = ? AND (et.organization_id = ? OR et.is_global = 1)
+[18-May-2025 11:25:21 UTC] Query parameters - template_id: 7, organization_id: 4
+[18-May-2025 11:25:21 UTC] Query result: Array
+(
+    [id] => 7
+    [name] => booking confirmation mail
+    [subject] => your booking confirmation
+    [content] => <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="text-align: center; margin-bottom: 30px;">
+        <img src="https://visafy.io/assets/images/logo-Visafy-light.png" alt="Visafy Logo" style="max-width: 200px;">
+    </div>
+    
+    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 20px;">
+        <h2 style="color: #042167; margin-top: 0;">{subject}</h2>
+        <p>Dear {first_name},</p>
+        <p>This is a sample email template generated based on your requirements. You can customize this template further using the editor.</p>
+        <p>Best regards,<br>Visafy Team</p>
+    </div>
+    
+    <div style="text-align: center; color: #6c757d; font-size: 12px; margin-top: 30px;">
+        <p>This email was sent to {email}</p>
+        <p>© 2025 Visafy. All rights reserved.</p>
+    </div>
+</div>
+    [template_type] => general
+    [organization_id] => 4
+    [is_global] => 0
+    [created_by] => 11
+    [created_at] => 2025-05-18 11:19:05
+    [updated_at] => 2025-05-18 11:22:36
+    [created_by_name] => sukumar Saurav
+)
+
+[18-May-2025 11:25:26 UTC] Organization ID from session: 4
+[18-May-2025 11:25:26 UTC] GET request data: Array
+(
+    [id] => 7
+)
+
+[18-May-2025 11:25:26 UTC] Template ID from request: 7
+[18-May-2025 11:25:26 UTC] Executing query: SELECT et.*, CONCAT(u.first_name, ' ', u.last_name) as created_by_name 
+              FROM email_templates et
+              JOIN users u ON et.created_by = u.id
+              WHERE et.id = ? AND (et.organization_id = ? OR et.is_global = 1)
+[18-May-2025 11:25:26 UTC] Query parameters - template_id: 7, organization_id: 4
+[18-May-2025 11:25:26 UTC] Query result: Array
+(
+    [id] => 7
+    [name] => booking confirmation mail
+    [subject] => your booking confirmation
+    [content] => <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="text-align: center; margin-bottom: 30px;">
+        <img src="https://visafy.io/assets/images/logo-Visafy-light.png" alt="Visafy Logo" style="max-width: 200px;">
+    </div>
+    
+    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 20px;">
+        <h2 style="color: #042167; margin-top: 0;">{subject}</h2>
+        <p>Dear {first_name},</p>
+        <p>This is a sample email template generated based on your requirements. You can customize this template further using the editor.</p>
+        <p>Best regards,<br>Visafy Team</p>
+    </div>
+    
+    <div style="text-align: center; color: #6c757d; font-size: 12px; margin-top: 30px;">
+        <p>This email was sent to {email}</p>
+        <p>© 2025 Visafy. All rights reserved.</p>
+    </div>
+</div>
+    [template_type] => general
+    [organization_id] => 4
+    [is_global] => 0
+    [created_by] => 11
+    [created_at] => 2025-05-18 11:19:05
+    [updated_at] => 2025-05-18 11:22:36
+    [created_by_name] => sukumar Saurav
+)
+
+[18-May-2025 11:25:40 UTC] Organization ID from session: 4
+[18-May-2025 11:25:40 UTC] GET request data: Array
+(
+    [id] => 7
+)
+
+[18-May-2025 11:25:40 UTC] Template ID from request: 7
+[18-May-2025 11:25:40 UTC] Executing query: SELECT et.*, CONCAT(u.first_name, ' ', u.last_name) as created_by_name 
+              FROM email_templates et
+              JOIN users u ON et.created_by = u.id
+              WHERE et.id = ? AND (et.organization_id = ? OR et.is_global = 1)
+[18-May-2025 11:25:40 UTC] Query parameters - template_id: 7, organization_id: 4
+[18-May-2025 11:25:40 UTC] Query result: Array
+(
+    [id] => 7
+    [name] => booking confirmation mail
+    [subject] => your booking confirmation
+    [content] => <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="text-align: center; margin-bottom: 30px;">
+        <img src="https://visafy.io/assets/images/logo-Visafy-light.png" alt="Visafy Logo" style="max-width: 200px;">
+    </div>
+    
+    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 20px;">
+        <h2 style="color: #042167; margin-top: 0;">{subject}</h2>
+        <p>Dear {first_name},</p>
+        <p>This is a sample email template generated based on your requirements. You can customize this template further using the editor.</p>
+        <p>Best regards,<br>Visafy Team</p>
+    </div>
+    
+    <div style="text-align: center; color: #6c757d; font-size: 12px; margin-top: 30px;">
+        <p>This email was sent to {email}</p>
+        <p>© 2025 Visafy. All rights reserved.</p>
+    </div>
+</div>
+    [template_type] => general
+    [organization_id] => 4
+    [is_global] => 0
+    [created_by] => 11
+    [created_at] => 2025-05-18 11:19:05
+    [updated_at] => 2025-05-18 11:25:02
+    [created_by_name] => sukumar Saurav
+)
+
+[18-May-2025 11:26:32 UTC] Organization ID from session: 4
+[18-May-2025 11:26:32 UTC] GET request data: Array
+(
+    [id] => 7
+)
+
+[18-May-2025 11:26:32 UTC] Template ID from request: 7
+[18-May-2025 11:26:32 UTC] Executing query: SELECT et.*, CONCAT(u.first_name, ' ', u.last_name) as created_by_name 
+              FROM email_templates et
+              JOIN users u ON et.created_by = u.id
+              WHERE et.id = ? AND (et.organization_id = ? OR et.is_global = 1)
+[18-May-2025 11:26:32 UTC] Query parameters - template_id: 7, organization_id: 4
+[18-May-2025 11:26:32 UTC] Query result: Array
+(
+    [id] => 7
+    [name] => booking confirmation mail
+    [subject] => your booking confirmation
+    [content] => <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="text-align: center; margin-bottom: 30px;">
+        <img src="https://visafy.io/assets/images/logo-Visafy-light.png" alt="Visafy Logo" style="max-width: 200px;">
+    </div>
+    
+    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 20px;">
+        <h2 style="color: #042167; margin-top: 0;">{subject}</h2>
+        <p>Dear {first_name},</p>
+        <p>This is a sample email template generated based on your requirements. You can customize this template further using the editor.</p>
+        <p>Best regards,<br>Visafy Team</p>
+    </div>
+    
+    <div style="text-align: center; color: #6c757d; font-size: 12px; margin-top: 30px;">
+        <p>This email was sent to {email}</p>
+        <p>© 2025 Visafy. All rights reserved.</p>
+    </div>
+</div>
+    [template_type] => general
+    [organization_id] => 4
+    [is_global] => 0
+    [created_by] => 11
+    [created_at] => 2025-05-18 11:19:05
+    [updated_at] => 2025-05-18 11:25:02
+    [created_by_name] => sukumar Saurav
+)
+
+[18-May-2025 11:26:35 UTC] Organization ID from session: 4
+[18-May-2025 11:26:35 UTC] GET request data: Array
+(
+    [id] => 7
+)
+
+[18-May-2025 11:26:35 UTC] Template ID from request: 7
+[18-May-2025 11:26:35 UTC] Executing query: SELECT et.*, CONCAT(u.first_name, ' ', u.last_name) as created_by_name 
+              FROM email_templates et
+              JOIN users u ON et.created_by = u.id
+              WHERE et.id = ? AND (et.organization_id = ? OR et.is_global = 1)
+[18-May-2025 11:26:35 UTC] Query parameters - template_id: 7, organization_id: 4
+[18-May-2025 11:26:35 UTC] Query result: Array
+(
+    [id] => 7
+    [name] => booking confirmation mail
+    [subject] => your booking confirmation
+    [content] => <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="text-align: center; margin-bottom: 30px;">
+        <img src="https://visafy.io/assets/images/logo-Visafy-light.png" alt="Visafy Logo" style="max-width: 200px;">
+    </div>
+    
+    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 20px;">
+        <h2 style="color: #042167; margin-top: 0;">{subject}</h2>
+        <p>Dear {first_name},</p>
+        <p>This is a sample email template generated based on your requirements. You can customize this template further using the editor.</p>
+        <p>Best regards,<br>Visafy Team</p>
+    </div>
+    
+    <div style="text-align: center; color: #6c757d; font-size: 12px; margin-top: 30px;">
+        <p>This email was sent to {email}</p>
+        <p>© 2025 Visafy. All rights reserved.</p>
+    </div>
+</div>
+    [template_type] => general
+    [organization_id] => 4
+    [is_global] => 0
+    [created_by] => 11
+    [created_at] => 2025-05-18 11:19:05
+    [updated_at] => 2025-05-18 11:25:02
+    [created_by_name] => sukumar Saurav
+)
+
+[18-May-2025 11:26:50 UTC] Organization ID from session: 4
+[18-May-2025 11:26:50 UTC] GET request data: Array
+(
+    [id] => 7
+)
+
+[18-May-2025 11:26:50 UTC] Template ID from request: 7
+[18-May-2025 11:26:50 UTC] Executing query: SELECT et.*, CONCAT(u.first_name, ' ', u.last_name) as created_by_name 
+              FROM email_templates et
+              JOIN users u ON et.created_by = u.id
+              WHERE et.id = ? AND (et.organization_id = ? OR et.is_global = 1)
+[18-May-2025 11:26:50 UTC] Query parameters - template_id: 7, organization_id: 4
+[18-May-2025 11:26:50 UTC] Query result: Array
+(
+    [id] => 7
+    [name] => booking confirmation mail
+    [subject] => your booking confirmation
+    [content] => <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="text-align: center; margin-bottom: 30px;">
+        <img src="https://visafy.io/assets/images/logo-Visafy-light.png" alt="Visafy Logo" style="max-width: 200px;">
+    </div>
+    
+    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 20px;">
+        <h2 style="color: #042167; margin-top: 0;">{subject}</h2>
+        <p>Dear {first_name},</p>
+        <p>This is a sample email template generated based on your requirements. You can customize this template further using the editor.</p>
+        <p>Best regards,<br>Visafy Team</p>
+    </div>
+    
+    <div style="text-align: center; color: #6c757d; font-size: 12px; margin-top: 30px;">
+        <p>This email was sent to {email}</p>
+        <p>© 2025 Visafy. All rights reserved.</p>
+    </div>
+</div>
+    [template_type] => general
+    [organization_id] => 4
+    [is_global] => 0
+    [created_by] => 11
+    [created_at] => 2025-05-18 11:19:05
+    [updated_at] => 2025-05-18 11:26:10
+    [created_by_name] => sukumar Saurav
+)
+
+[18-May-2025 11:27:17 UTC] Organization ID from session: 4
+[18-May-2025 11:27:17 UTC] GET request data: Array
+(
+    [id] => 7
+)
+
+[18-May-2025 11:27:17 UTC] Template ID from request: 7
+[18-May-2025 11:27:17 UTC] Executing query: SELECT et.*, CONCAT(u.first_name, ' ', u.last_name) as created_by_name 
+              FROM email_templates et
+              JOIN users u ON et.created_by = u.id
+              WHERE et.id = ? AND (et.organization_id = ? OR et.is_global = 1)
+[18-May-2025 11:27:17 UTC] Query parameters - template_id: 7, organization_id: 4
+[18-May-2025 11:27:17 UTC] Query result: Array
+(
+    [id] => 7
+    [name] => booking confirmation mail
+    [subject] => your booking confirmation
+    [content] => <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="text-align: center; margin-bottom: 30px;">
+        <img src="https://visafy.io/assets/images/logo-Visafy-light.png" alt="Visafy Logo" style="max-width: 200px;">
+    </div>
+    
+    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 20px;">
+        <h2 style="color: #042167; margin-top: 0;">{subject}</h2>
+        <p>Dear {first_name},</p>
+        <p>This is a sample email template generated based on your requirements. You can customize this template further using the editor.</p>
+        <p>Best regards,<br>Visafy Team</p>
+    </div>
+    
+    <div style="text-align: center; color: #6c757d; font-size: 12px; margin-top: 30px;">
+        <p>This email was sent to {email}</p>
+        <p>© 2025 Visafy. All rights reserved.</p>
+    </div>
+</div>
+    [template_type] => general
+    [organization_id] => 4
+    [is_global] => 0
+    [created_by] => 11
+    [created_at] => 2025-05-18 11:19:05
+    [updated_at] => 2025-05-18 11:26:10
+    [created_by_name] => sukumar Saurav
+)
+
+[18-May-2025 11:27:20 UTC] Organization ID from session: 4
+[18-May-2025 11:27:20 UTC] GET request data: Array
+(
+    [id] => 7
+)
+
+[18-May-2025 11:27:20 UTC] Template ID from request: 7
+[18-May-2025 11:27:20 UTC] Executing query: SELECT et.*, CONCAT(u.first_name, ' ', u.last_name) as created_by_name 
+              FROM email_templates et
+              JOIN users u ON et.created_by = u.id
+              WHERE et.id = ? AND (et.organization_id = ? OR et.is_global = 1)
+[18-May-2025 11:27:20 UTC] Query parameters - template_id: 7, organization_id: 4
+[18-May-2025 11:27:20 UTC] Query result: Array
+(
+    [id] => 7
+    [name] => booking confirmation mail
+    [subject] => your booking confirmation
+    [content] => <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="text-align: center; margin-bottom: 30px;">
+        <img src="https://visafy.io/assets/images/logo-Visafy-light.png" alt="Visafy Logo" style="max-width: 200px;">
+    </div>
+    
+    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 20px;">
+        <h2 style="color: #042167; margin-top: 0;">{subject}</h2>
+        <p>Dear {first_name},</p>
+        <p>This is a sample email template generated based on your requirements. You can customize this template further using the editor.</p>
+        <p>Best regards,<br>Visafy Team</p>
+    </div>
+    
+    <div style="text-align: center; color: #6c757d; font-size: 12px; margin-top: 30px;">
+        <p>This email was sent to {email}</p>
+        <p>© 2025 Visafy. All rights reserved.</p>
+    </div>
+</div>
+    [template_type] => general
+    [organization_id] => 4
+    [is_global] => 0
+    [created_by] => 11
+    [created_at] => 2025-05-18 11:19:05
+    [updated_at] => 2025-05-18 11:26:10
+    [created_by_name] => sukumar Saurav
+)
+
+[18-May-2025 11:27:30 UTC] Organization ID from session: 4
+[18-May-2025 11:27:30 UTC] GET request data: Array
+(
+    [id] => 7
+)
+
+[18-May-2025 11:27:30 UTC] Template ID from request: 7
+[18-May-2025 11:27:30 UTC] Executing query: SELECT et.*, CONCAT(u.first_name, ' ', u.last_name) as created_by_name 
+              FROM email_templates et
+              JOIN users u ON et.created_by = u.id
+              WHERE et.id = ? AND (et.organization_id = ? OR et.is_global = 1)
+[18-May-2025 11:27:30 UTC] Query parameters - template_id: 7, organization_id: 4
+[18-May-2025 11:27:30 UTC] Query result: Array
+(
+    [id] => 7
+    [name] => booking confirmation mail
+    [subject] => your booking confirmation
+    [content] => <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="text-align: center; margin-bottom: 30px;">
+        <img src="https://visafy.io/assets/images/logo-Visafy-light.png" alt="Visafy Logo" style="max-width: 200px;">
+    </div>
+    
+    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 20px;">
+        <h2 style="color: #042167; margin-top: 0;">{subject}</h2>
+        <p>Dear {first_name},</p>
+        <p>This is a sample email template generated based on your requirements. You can customize this template further using the editor.</p>
+        <p>Best regards,<br>Visafy Team</p>
+    </div>
+    
+    <div style="text-align: center; color: #6c757d; font-size: 12px; margin-top: 30px;">
+        <p>This email was sent to {email}</p>
+        <p>© 2025 Visafy. All rights reserved.</p>
+    </div>
+</div>
+    [template_type] => general
+    [organization_id] => 4
+    [is_global] => 0
+    [created_by] => 11
+    [created_at] => 2025-05-18 11:19:05
+    [updated_at] => 2025-05-18 11:26:52
+    [created_by_name] => sukumar Saurav
+)
+
+[04-Jul-2025 09:06:14 UTC] Organization ID from session: 6
+[04-Jul-2025 09:06:14 UTC] GET request data: Array
+(
+    [id] => 10
+)
+
+[04-Jul-2025 09:06:14 UTC] Template ID from request: 10
+[04-Jul-2025 09:06:14 UTC] Executing query: SELECT et.*, CONCAT(u.first_name, ' ', u.last_name) as created_by_name 
+              FROM email_templates et
+              JOIN users u ON et.created_by = u.id
+              WHERE et.id = ? AND (et.organization_id = ? OR et.is_global = 1)
+[04-Jul-2025 09:06:14 UTC] Query parameters - template_id: 10, organization_id: 6
+[04-Jul-2025 09:06:14 UTC] Query result: Array
+(
+    [id] => 10
+    [name] => Welcome Email
+    [subject] => Welcome Email
+    [content] => <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="text-align: center; margin-bottom: 30px;">
+        <img src="https://visafy.io/logo.png" alt="Visafy Logo" style="max-width: 200px;">
+    </div>
+    
+    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 20px;">
+        <h2 style="color: #042167; margin-top: 0;">{subject}</h2>
+        <p>Dear {first_name},</p>
+        <p>This is a sample email template generated based on your requirements. You can customize this template further using the editor.</p>
+        <p>Best regards,<br>Visafy Team</p>
+    </div>
+    
+    <div style="text-align: center; color: #6c757d; font-size: 12px; margin-top: 30px;">
+        <p>This email was sent to {email}</p>
+        <p>© 2025 Visafy. All rights reserved.</p>
+    </div>
+</div>
+    [template_type] => welcome
+    [organization_id] => 6
+    [is_global] => 0
+    [created_by] => 15
+    [created_at] => 2025-07-03 18:45:56
+    [updated_at] => 2025-07-03 18:45:56
+    [created_by_name] => rajeev Ranjan
+)
+
+[04-Jul-2025 09:08:12 UTC] Organization ID from session: 6
+[04-Jul-2025 09:08:12 UTC] GET request data: Array
+(
+    [id] => 10
+)
+
+[04-Jul-2025 09:08:12 UTC] Template ID from request: 10
+[04-Jul-2025 09:08:12 UTC] Executing query: SELECT et.*, CONCAT(u.first_name, ' ', u.last_name) as created_by_name 
+              FROM email_templates et
+              JOIN users u ON et.created_by = u.id
+              WHERE et.id = ? AND (et.organization_id = ? OR et.is_global = 1)
+[04-Jul-2025 09:08:12 UTC] Query parameters - template_id: 10, organization_id: 6
+[04-Jul-2025 09:08:12 UTC] Query result: Array
+(
+    [id] => 10
+    [name] => Welcome Email
+    [subject] => Welcome Email
+    [content] => <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="text-align: center; margin-bottom: 30px;">
+        <img src="https://visafy.io/logo.png" alt="Visafy Logo" style="max-width: 200px;">
+    </div>
+    
+    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 20px;">
+        <h2 style="color: #042167; margin-top: 0;">{subject}</h2>
+        <p>Dear {first_name},</p>
+        <p>This is a sample email template generated based on your requirements. You can customize this template further using the editor.</p>
+        <p>Best regards,<br>Visafy Team</p>
+    </div>
+    
+    <div style="text-align: center; color: #6c757d; font-size: 12px; margin-top: 30px;">
+        <p>This email was sent to {email}</p>
+        <p>© 2025 Visafy. All rights reserved.</p>
+    </div>
+</div>
+    [template_type] => welcome
+    [organization_id] => 6
+    [is_global] => 0
+    [created_by] => 15
+    [created_at] => 2025-07-03 18:45:56
+    [updated_at] => 2025-07-03 18:45:56
+    [created_by_name] => Rajeev Ranjan
+)
+

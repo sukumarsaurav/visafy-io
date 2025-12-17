@@ -1,0 +1,2319 @@
+<?php
+// Start output buffering to prevent 'headers already sent' errors
+ob_start();
+
+$page_title = "Messages";
+$page_specific_css = "assets/css/messages.css";
+require_once 'includes/header.php';
+
+// Define formatTimeAgo function at the top to ensure it's available
+function formatTimeAgo($timestamp) {
+    $current_time = time();
+    $time_difference = $current_time - strtotime($timestamp);
+    
+    if ($time_difference < 60) {
+        return "just now";
+    } elseif ($time_difference < 3600) {
+        $minutes = floor($time_difference / 60);
+        return $minutes . ' minute' . ($minutes > 1 ? 's' : '') . ' ago';
+    } elseif ($time_difference < 86400) {
+        $hours = floor($time_difference / 3600);
+        return $hours . ' hour' . ($hours > 1 ? 's' : '') . ' ago';
+    } elseif ($time_difference < 604800) {
+        $days = floor($time_difference / 86400);
+        return $days . ' day' . ($days > 1 ? 's' : '') . ' ago';
+    } else {
+        return date('M j, Y', strtotime($timestamp));
+    }
+}
+
+// Get all conversations for current user
+$user_id = $_SESSION['id'];
+
+// Check if organization_id is set in session, if not fetch it from database
+if (!isset($_SESSION['organization_id'])) {
+    // Get organization_id from user data
+    $org_query = "SELECT organization_id FROM users WHERE id = ?";
+    $stmt = $conn->prepare($org_query);
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+    $org_result = $stmt->get_result();
+    if ($org_result && $org_result->num_rows > 0) {
+        $organization_id = $org_result->fetch_assoc()['organization_id'];
+        // Set it in the session for future use
+        $_SESSION['organization_id'] = $organization_id;
+    } else {
+        // Default to 0 if not found (this should be handled gracefully)
+        $organization_id = 0;
+    }
+    $stmt->close();
+} else {
+    $organization_id = $_SESSION['organization_id'];
+}
+
+// Fetch all conversations the current user is participating in within their organization
+$query = "SELECT c.id, c.title, c.type, c.application_id, c.booking_id, c.created_at, c.last_message_at,
+          (SELECT message FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message,
+          (SELECT CONCAT(u.first_name, ' ', u.last_name) 
+           FROM messages m 
+           JOIN users u ON m.user_id = u.id 
+           WHERE m.conversation_id = c.id 
+           ORDER BY m.created_at DESC LIMIT 1) as last_message_sender,
+          (SELECT COUNT(m.id) 
+           FROM messages m 
+           LEFT JOIN message_read_status mrs ON m.id = mrs.message_id AND mrs.user_id = ?
+           WHERE m.conversation_id = c.id AND m.user_id != ? AND mrs.id IS NULL) as unread_count,
+          (SELECT b.reference_number FROM bookings b WHERE b.id = c.booking_id) as booking_reference
+          FROM conversations c
+          JOIN conversation_participants cp ON c.id = cp.conversation_id
+          WHERE cp.user_id = ? AND cp.left_at IS NULL AND c.organization_id = ?
+          ORDER BY c.last_message_at DESC";
+
+$stmt = $conn->prepare($query);
+$stmt->bind_param('iiii', $user_id, $user_id, $user_id, $organization_id);
+$stmt->execute();
+$result = $stmt->get_result();
+$conversations = [];
+
+if ($result && $result->num_rows > 0) {
+    while ($row = $result->fetch_assoc()) {
+        $conversations[] = $row;
+    }
+}
+$stmt->close();
+
+// Get specific conversation if ID is provided
+$selected_conversation = null;
+$conversation_messages = [];
+$conversation_participants = [];
+
+if (isset($_GET['conversation_id']) && !empty($_GET['conversation_id'])) {
+    $conversation_id = $_GET['conversation_id'];
+    
+    // Get conversation details
+    $query = "SELECT c.*, 
+              CASE WHEN c.type = 'direct' THEN 
+                (SELECT CONCAT(u.first_name, ' ', u.last_name)
+                 FROM conversation_participants cp
+                 JOIN users u ON cp.user_id = u.id
+                 WHERE cp.conversation_id = c.id 
+                 AND cp.user_id <> ? AND cp.left_at IS NULL
+                 LIMIT 1)
+              ELSE c.title END as display_name,
+              (SELECT b.reference_number FROM bookings b WHERE b.id = c.booking_id) as booking_reference
+              FROM conversations c
+              WHERE c.id = ? AND c.organization_id = ?";
+    
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param('iii', $user_id, $conversation_id, $organization_id);
+    $stmt->execute();
+    $selected_conversation = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    
+    if ($selected_conversation) {
+        // Get conversation messages
+        $query = "SELECT m.*, 
+                  u.first_name, u.last_name, u.profile_picture, u.user_type,
+                  (SELECT COUNT(*) FROM message_reactions mr WHERE mr.message_id = m.id) as reaction_count
+                  FROM messages m
+                  JOIN users u ON m.user_id = u.id
+                  WHERE m.conversation_id = ? AND m.deleted_at IS NULL
+                  ORDER BY m.created_at ASC";
+        
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param('i', $conversation_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        while ($row = $result->fetch_assoc()) {
+            $conversation_messages[] = $row;
+        }
+        $stmt->close();
+        
+        // Get conversation participants with their roles
+        $query = "SELECT cp.role, cp.joined_at, 
+                 u.id, u.first_name, u.last_name, u.profile_picture, u.status, u.user_type,
+                 CASE 
+                    WHEN cp.role = 'team_member' THEN (SELECT tm.member_type FROM team_members tm WHERE tm.member_user_id = u.id LIMIT 1)
+                    ELSE cp.role
+                 END as member_role
+                 FROM conversation_participants cp
+                 JOIN users u ON cp.user_id = u.id
+                 WHERE cp.conversation_id = ? AND cp.left_at IS NULL";
+        
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param('i', $conversation_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        while ($row = $result->fetch_assoc()) {
+            $conversation_participants[] = $row;
+        }
+        $stmt->close();
+        
+        // Mark messages as read
+        $query = "INSERT INTO message_read_status (message_id, user_id, read_at)
+                 SELECT m.id, ?, NOW()
+                 FROM messages m
+                 LEFT JOIN message_read_status mrs ON m.id = mrs.message_id AND mrs.user_id = ?
+                 WHERE m.conversation_id = ? 
+                 AND m.user_id != ? 
+                 AND mrs.id IS NULL";
+        
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param('iiii', $user_id, $user_id, $conversation_id, $user_id);
+        $stmt->execute();
+        $stmt->close();
+    }
+}
+
+// Handle new message submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_message'])) {
+    $conversation_id = $_POST['conversation_id'];
+    $message_text = trim($_POST['message_text']);
+    
+    if (!empty($message_text)) {
+        $query = "INSERT INTO messages (conversation_id, user_id, message, created_at)
+                 VALUES (?, ?, ?, NOW())";
+        
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param('iis', $conversation_id, $user_id, $message_text);
+        
+        if ($stmt->execute()) {
+            // Redirect to prevent form resubmission
+            header("Location: messages.php?conversation_id=" . $conversation_id);
+            exit;
+        } else {
+            $error_message = "Error sending message: " . $conn->error;
+        }
+        $stmt->close();
+    } else {
+        $error_message = "Message cannot be empty";
+    }
+}
+
+// Handle creating a new conversation
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_conversation'])) {
+    $participants = isset($_POST['participants']) ? $_POST['participants'] : [];
+    $title = isset($_POST['group_title']) ? trim($_POST['group_title']) : null;
+    $type = (count($participants) > 1 || !empty($title)) ? 'group' : 'direct';
+    
+    $errors = [];
+    if (empty($participants)) {
+        $errors[] = "Please select at least one participant";
+    }
+    
+    if ($type === 'group' && empty($title)) {
+        $errors[] = "Group title is required";
+    }
+    
+    if (empty($errors)) {
+        // Start transaction
+        $conn->begin_transaction();
+        
+        try {
+            // Create new conversation
+            $query = "INSERT INTO conversations (title, type, created_by, organization_id, created_at, last_message_at)
+                     VALUES (?, ?, ?, ?, NOW(), NOW())";
+            
+            $stmt = $conn->prepare($query);
+            $stmt->bind_param('ssii', $title, $type, $user_id, $organization_id);
+            $stmt->execute();
+            
+            $new_conversation_id = $conn->insert_id;
+            $stmt->close();
+            
+            // Add current user as participant
+            $query = "INSERT INTO conversation_participants (conversation_id, user_id, role, joined_at)
+                     VALUES (?, ?, 'consultant', NOW())";
+            
+            $stmt = $conn->prepare($query);
+            $stmt->bind_param('ii', $new_conversation_id, $user_id);
+            $stmt->execute();
+            $stmt->close();
+            
+            // Add other participants
+            foreach ($participants as $participant_id) {
+                // Get user type for role
+                $query = "SELECT user_type FROM users WHERE id = ?";
+                $stmt = $conn->prepare($query);
+                $stmt->bind_param('i', $participant_id);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                $user = $result->fetch_assoc();
+                $role = $user['user_type'];
+                $stmt->close();
+                
+                $query = "INSERT INTO conversation_participants (conversation_id, user_id, role, joined_at)
+                         VALUES (?, ?, ?, NOW())";
+                
+                $stmt = $conn->prepare($query);
+                $stmt->bind_param('iis', $new_conversation_id, $participant_id, $role);
+                $stmt->execute();
+                $stmt->close();
+            }
+            
+            // Add system message
+            $system_message = $type === 'direct' ? 'Conversation started' : 'Group conversation created';
+            $query = "INSERT INTO messages (conversation_id, user_id, message, is_system_message, created_at)
+                     VALUES (?, ?, ?, 1, NOW())";
+            
+            $stmt = $conn->prepare($query);
+            $stmt->bind_param('iis', $new_conversation_id, $user_id, $system_message);
+            $stmt->execute();
+            $stmt->close();
+            
+            // Commit transaction
+            $conn->commit();
+            
+            // Redirect to the new conversation
+            header("Location: messages.php?conversation_id=" . $new_conversation_id);
+            exit;
+        } catch (Exception $e) {
+            // Rollback transaction on error
+            $conn->rollback();
+            $error_message = "Error creating conversation: " . $e->getMessage();
+        }
+    } else {
+        $error_message = implode("<br>", $errors);
+    }
+}
+
+// Get all possible participants for new conversations within the same organization
+$query = "SELECT u.id, u.first_name, u.last_name, u.email, u.user_type, u.profile_picture,
+          CASE 
+            WHEN u.user_type = 'member' THEN 
+              (SELECT tm.member_type FROM team_members tm WHERE tm.member_user_id = u.id LIMIT 1)
+            ELSE u.user_type
+          END as role_type
+          FROM users u
+          WHERE u.id <> ? AND u.status = 'active' AND u.deleted_at IS NULL 
+          AND u.organization_id = ?
+          ORDER BY u.first_name, u.last_name";
+
+$stmt = $conn->prepare($query);
+$stmt->bind_param('ii', $user_id, $organization_id);
+$stmt->execute();
+$result = $stmt->get_result();
+$potential_participants = [];
+
+while ($row = $result->fetch_assoc()) {
+    $potential_participants[] = $row;
+}
+$stmt->close();
+
+// Add applicants who have bookings with this consultant
+$query = "SELECT DISTINCT u.id, u.first_name, u.last_name, u.email, u.user_type, u.profile_picture
+          FROM users u
+          JOIN bookings b ON u.id = b.user_id
+          WHERE b.consultant_id = ? AND u.status = 'active' AND u.deleted_at IS NULL
+          AND u.id NOT IN (SELECT id FROM users WHERE organization_id = ?)
+          ORDER BY u.first_name, u.last_name";
+
+$stmt = $conn->prepare($query);
+$stmt->bind_param('ii', $user_id, $organization_id);
+$stmt->execute();
+$result = $stmt->get_result();
+
+while ($row = $result->fetch_assoc()) {
+    $row['role_type'] = 'applicant';
+    $potential_participants[] = $row;
+}
+$stmt->close();
+
+// Handle task assignment
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign_task'])) {
+    $conversation_id = $_POST['conversation_id'];
+    $task_name = trim($_POST['task_name']);
+    $task_description = trim($_POST['task_description']);
+    $task_priority = $_POST['task_priority'];
+    $task_due_date = !empty($_POST['task_due_date']) ? $_POST['task_due_date'] : null;
+    $task_assignees = isset($_POST['task_assignees']) ? $_POST['task_assignees'] : [];
+    $share_in_chat = isset($_POST['task_share_in_chat']) ? true : false;
+    
+    // Validate inputs
+    $errors = [];
+    if (empty($task_name)) {
+        $errors[] = "Task name is required";
+    }
+    if (empty($task_assignees)) {
+        $errors[] = "At least one assignee is required";
+    }
+    
+    if (empty($errors)) {
+        // Begin transaction
+        $conn->begin_transaction();
+        
+        try {
+            // Get admin ID from session
+            $admin_id = $_SESSION["id"];
+            
+            // Insert task record
+            $task_insert = "INSERT INTO tasks (name, description, priority, admin_id, due_date, organization_id) 
+                          VALUES (?, ?, ?, ?, ?, ?)";
+            $stmt = $conn->prepare($task_insert);
+            $stmt->bind_param('sssisi', $task_name, $task_description, $task_priority, $admin_id, $task_due_date, $organization_id);
+            $stmt->execute();
+            
+            $task_id = $conn->insert_id;
+            $stmt->close();
+            
+            // Insert task assignments
+            if (!empty($task_assignees)) {
+                $assignment_insert = "INSERT INTO task_assignments (task_id, team_member_id) VALUES (?, ?)";
+                $stmt = $conn->prepare($assignment_insert);
+                
+                foreach ($task_assignees as $assignee_id) {
+                    $stmt->bind_param('ii', $task_id, $assignee_id);
+                    $stmt->execute();
+                    
+                    // Create activity log for assignment
+                    $log_insert = "INSERT INTO task_activity_logs (task_id, user_id, team_member_id, activity_type, description) 
+                                 VALUES (?, ?, ?, 'assigned', 'Task assigned through conversation')";
+                    $log_stmt = $conn->prepare($log_insert);
+                    $log_stmt->bind_param('iii', $task_id, $_SESSION["id"], $assignee_id);
+                    $log_stmt->execute();
+                    $log_stmt->close();
+                    
+                    // Create notification for assignee
+                    $notif_insert = "INSERT INTO notifications (user_id, related_user_id, notification_type, title, content, related_to_type, related_to_id, is_actionable, action_url, organization_id) 
+                                   VALUES (?, ?, 'task_assigned', 'New Task Assignment', ?, 'task', ?, 1, ?, ?)";
+                    $notif_content = "You have been assigned to task: " . $task_name;
+                    $action_url = "/dashboard/admin/task_detail.php?id=" . $task_id;
+                    
+                    $notif_stmt = $conn->prepare($notif_insert);
+                    $notif_stmt->bind_param('iisisi', $assignee_id, $_SESSION["id"], $notif_content, $task_id, $action_url, $organization_id);
+                    $notif_stmt->execute();
+                    $notif_stmt->close();
+                }
+                $stmt->close();
+            }
+            
+            // Add a message in the conversation if requested
+            if ($share_in_chat) {
+                // Format due date for display
+                $due_date_text = !empty($task_due_date) ? " (Due: " . date('M d, Y', strtotime($task_due_date)) . ")" : "";
+                
+                // Get assignee names
+                $assignee_names = [];
+                foreach ($task_assignees as $assignee_id) {
+                    foreach ($conversation_participants as $participant) {
+                        if ($participant['id'] == $assignee_id) {
+                            $assignee_names[] = $participant['first_name'] . ' ' . $participant['last_name'];
+                            break;
+                        }
+                    }
+                }
+                
+                $assignee_text = count($assignee_names) > 0 ? " assigned to " . implode(", ", $assignee_names) : "";
+                
+                // Construct message
+                $system_message = "🔔 Task Created: \"" . $task_name . "\"" . $due_date_text . $assignee_text;
+                if (!empty($task_description)) {
+                    $system_message .= "\n\nDescription: " . $task_description;
+                }
+                $system_message .= "\n\nPriority: " . ucfirst($task_priority);
+                $system_message .= "\n\nView details: /dashboard/admin/task_detail.php?id=" . $task_id;
+                
+                // Insert the message
+                $query = "INSERT INTO messages (conversation_id, user_id, message, created_at)
+                         VALUES (?, ?, ?, NOW())";
+                
+                $stmt = $conn->prepare($query);
+                $stmt->bind_param('iis', $conversation_id, $user_id, $system_message);
+                $stmt->execute();
+                $stmt->close();
+            }
+            
+            // Commit transaction
+            $conn->commit();
+            
+            // Redirect to prevent form resubmission
+            header("Location: messages.php?conversation_id=" . $conversation_id . "&task_assigned=1");
+            exit;
+        } catch (Exception $e) {
+            // Rollback transaction on error
+            $conn->rollback();
+            $error_message = "Error assigning task: " . $e->getMessage();
+        }
+    } else {
+        $error_message = implode("<br>", $errors);
+    }
+}
+
+// Handle document request
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_document'])) {
+    $conversation_id = $_POST['conversation_id'];
+    $document_title = trim($_POST['document_title']);
+    $document_description = trim($_POST['document_description']);
+    $document_type = $_POST['document_type'];
+    $document_requestees = isset($_POST['document_requestees']) ? $_POST['document_requestees'] : [];
+    $document_due_date = !empty($_POST['document_due_date']) ? $_POST['document_due_date'] : null;
+    $share_in_chat = isset($_POST['document_share_in_chat']) ? true : false;
+    
+    // Validate inputs
+    $errors = [];
+    if (empty($document_title)) {
+        $errors[] = "Document title is required";
+    }
+    if (empty($document_requestees)) {
+        $errors[] = "At least one recipient is required";
+    }
+    
+    if (empty($errors)) {
+        // Begin transaction
+        $conn->begin_transaction();
+        
+        try {
+            // Get document type name
+            $doc_type_query = "SELECT name FROM document_types WHERE id = ?";
+            $stmt = $conn->prepare($doc_type_query);
+            $stmt->bind_param('i', $document_type);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $doc_type = $result->fetch_assoc();
+            $document_type_name = $doc_type['name'];
+            $stmt->close();
+            
+            // Process for each recipient
+            foreach ($document_requestees as $requestee_id) {
+                // Create notification for document request
+                $notif_insert = "INSERT INTO notifications (user_id, related_user_id, notification_type, title, content, related_to_type, related_to_id, is_actionable, action_url, organization_id) 
+                               VALUES (?, ?, 'document_requested', 'Document Request', ?, 'document', NULL, 1, ?, ?)";
+                $notif_content = "Please upload document: " . $document_title . " (" . $document_type_name . ")";
+                if (!empty($document_due_date)) {
+                    $notif_content .= " by " . date('M d, Y', strtotime($document_due_date));
+                }
+                if (!empty($document_description)) {
+                    $notif_content .= "\n\n" . $document_description;
+                }
+                
+                $action_url = "/dashboard/client/documents.php?upload=1&type=" . $document_type;
+                
+                $notif_stmt = $conn->prepare($notif_insert);
+                $notif_stmt->bind_param('iissi', $requestee_id, $_SESSION["id"], $notif_content, $action_url, $organization_id);
+                $notif_stmt->execute();
+                $notif_stmt->close();
+            }
+            
+            // Add a message in the conversation if requested
+            if ($share_in_chat) {
+                // Format due date for display
+                $due_date_text = !empty($document_due_date) ? " (Required by: " . date('M d, Y', strtotime($document_due_date)) . ")" : "";
+                
+                // Get requestee names
+                $requestee_names = [];
+                foreach ($document_requestees as $requestee_id) {
+                    foreach ($conversation_participants as $participant) {
+                        if ($participant['id'] == $requestee_id) {
+                            $requestee_names[] = $participant['first_name'] . ' ' . $participant['last_name'];
+                            break;
+                        }
+                    }
+                }
+                
+                $requestee_text = count($requestee_names) > 0 ? " requested from " . implode(", ", $requestee_names) : "";
+                
+                // Construct message
+                $system_message = "📄 Document Request: \"" . $document_title . "\" (" . $document_type_name . ")" . $due_date_text . $requestee_text;
+                if (!empty($document_description)) {
+                    $system_message .= "\n\nDetails: " . $document_description;
+                }
+                
+                // Insert the message
+                $query = "INSERT INTO messages (conversation_id, user_id, message, created_at)
+                         VALUES (?, ?, ?, NOW())";
+                
+                $stmt = $conn->prepare($query);
+                $stmt->bind_param('iis', $conversation_id, $user_id, $system_message);
+                $stmt->execute();
+                $stmt->close();
+            }
+            
+            // Commit transaction
+            $conn->commit();
+            
+            // Redirect to prevent form resubmission
+            header("Location: messages.php?conversation_id=" . $conversation_id . "&document_requested=1");
+            exit;
+        } catch (Exception $e) {
+            // Rollback transaction on error
+            $conn->rollback();
+            $error_message = "Error requesting document: " . $e->getMessage();
+        }
+    } else {
+        $error_message = implode("<br>", $errors);
+    }
+}
+?>
+
+<div class="content-wrapper">
+    <div class="messaging-container">
+        <div class="conversations-sidebar">
+            <div class="conversations-header">
+                <h1>Conversations</h1>
+                <button type="button" class="btn-new-conversation" id="newConversationBtn">
+                    <i class="fas fa-plus"></i> New
+                </button>
+            </div>
+            
+            <div class="search-bar">
+                <input type="text" id="conversation-search" placeholder="Search conversations...">
+                <i class="fas fa-search"></i>
+            </div>
+            
+            <div class="conversations-list">
+                <?php if (empty($conversations)): ?>
+                    <div class="loading-conversations">
+                        No conversations found. Start a new one!
+                    </div>
+                <?php else: ?>
+                    <?php foreach ($conversations as $conversation): ?>
+                        <a href="messages.php?conversation_id=<?php echo $conversation['id']; ?>" 
+                           class="conversation-item <?php echo (isset($_GET['conversation_id']) && $_GET['conversation_id'] == $conversation['id']) ? 'active' : ''; ?>">
+                            <div class="conversation-avatar">
+                                <?php if ($conversation['type'] === 'group'): ?>
+                                    <div class="group-avatar">
+                                        <i class="fas fa-users"></i>
+                                    </div>
+                                <?php else: ?>
+                                    <div class="initials">
+                                        <?php 
+                                        // Get the other participant's name in direct conversations
+                                        $query = "SELECT CONCAT(u.first_name, ' ', u.last_name) as name
+                                                  FROM conversation_participants cp
+                                                  JOIN users u ON cp.user_id = u.id
+                                                  WHERE cp.conversation_id = ? AND cp.user_id <> ? AND cp.left_at IS NULL
+                                                  LIMIT 1";
+                                        $stmt = $conn->prepare($query);
+                                        $stmt->bind_param('ii', $conversation['id'], $user_id);
+                                        $stmt->execute();
+                                        $result = $stmt->get_result();
+                                        $other_user = $result->fetch_assoc();
+                                        $stmt->close();
+                                        
+                                        $name_parts = explode(' ', $other_user['name']);
+                                        echo substr($name_parts[0], 0, 1) . (isset($name_parts[1]) ? substr($name_parts[1], 0, 1) : '');
+                                        ?>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                            <div class="conversation-details">
+                                <div class="conversation-header">
+                                    <h4>
+                                        <?php 
+                                        if ($conversation['type'] === 'group') {
+                                            echo htmlspecialchars($conversation['title']);
+                                        } else {
+                                            echo htmlspecialchars($other_user['name']);
+                                        }
+                                        ?>
+                                    </h4>
+                                    <span class="conversation-time">
+                                        <?php echo formatTimeAgo($conversation['last_message_at']); ?>
+                                    </span>
+                                </div>
+                                <div class="conversation-preview">
+                                    <p>
+                                        <?php if ($conversation['booking_reference']): ?>
+                                            <span class="booking-ref">[<?php echo $conversation['booking_reference']; ?>]</span>
+                                        <?php endif; ?>
+                                        
+                                        <?php if ($conversation['last_message']): ?>
+                                            <?php echo htmlspecialchars(substr($conversation['last_message'], 0, 50) . (strlen($conversation['last_message']) > 50 ? '...' : '')); ?>
+                                        <?php else: ?>
+                                            No messages yet
+                                        <?php endif; ?>
+                                    </p>
+                                    <?php if ($conversation['unread_count'] > 0): ?>
+                                        <span class="unread-badge"><?php echo $conversation['unread_count']; ?></span>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </a>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
+        </div>
+        
+        <div class="messages-area">
+            <?php if ($selected_conversation): ?>
+                <div class="message-header">
+                    <div class="conversation-info">
+                        <div class="conversation-avatar large">
+                            <?php if ($selected_conversation['type'] === 'group'): ?>
+                                <div class="group-avatar">
+                                    <i class="fas fa-users"></i>
+                                </div>
+                            <?php else: ?>
+                                <div class="initials">
+                                    <?php 
+                                    $name_parts = explode(' ', $selected_conversation['display_name']);
+                                    echo substr($name_parts[0], 0, 1) . (isset($name_parts[1]) ? substr($name_parts[1], 0, 1) : '');
+                                    ?>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                        <div>
+                            <h3>
+                                <?php echo htmlspecialchars($selected_conversation['display_name']); ?>
+                                <?php if ($selected_conversation['booking_reference']): ?>
+                                    <span class="booking-badge"><?php echo $selected_conversation['booking_reference']; ?></span>
+                                <?php endif; ?>
+                            </h3>
+                            <p>
+                                <?php if ($selected_conversation['type'] === 'group'): ?>
+                                    <?php echo count($conversation_participants); ?> participants
+                                <?php else: ?>
+                                    Active now
+                                <?php endif; ?>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="conversation-actions">
+                        <button type="button" class="btn-icon" title="Info" id="infoBtn">
+                            <i class="fas fa-info-circle"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="message-content">
+                    <?php if (empty($conversation_messages)): ?>
+                        <div class="empty-chat">
+                            <i class="fas fa-comments"></i>
+                            <p>No messages yet. Start the conversation!</p>
+                        </div>
+                    <?php else: ?>
+                        <?php 
+                        $date_groups = [];
+                        foreach ($conversation_messages as $message) {
+                            $date = date('Y-m-d', strtotime($message['created_at']));
+                            if (!isset($date_groups[$date])) {
+                                $date_groups[$date] = [];
+                            }
+                            $date_groups[$date][] = $message;
+                        }
+                        ?>
+                        
+                        <?php foreach ($date_groups as $date => $messages): ?>
+                            <div class="message-date-divider">
+                                <span>
+                                    <?php 
+                                    $today = date('Y-m-d');
+                                    $yesterday = date('Y-m-d', strtotime('-1 day'));
+                                    
+                                    if ($date === $today) {
+                                        echo 'Today';
+                                    } elseif ($date === $yesterday) {
+                                        echo 'Yesterday';
+                                    } else {
+                                        echo date('F j, Y', strtotime($date));
+                                    }
+                                    ?>
+                                </span>
+                            </div>
+                            
+                            <?php foreach ($messages as $message): ?>
+                                <div class="message-bubble <?php echo $message['user_id'] == $user_id ? 'outgoing' : 'incoming'; ?>">
+                                    <?php if ($message['user_id'] != $user_id): ?>
+                                        <div class="message-avatar">
+                                            <?php if (!empty($message['profile_picture'])): ?>
+                                                <img src="../../uploads/profiles/<?php echo $message['profile_picture']; ?>" alt="Profile">
+                                            <?php else: ?>
+                                                <div class="initials">
+                                                    <?php echo substr($message['first_name'], 0, 1) . substr($message['last_name'], 0, 1); ?>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+                                    <?php endif; ?>
+                                    
+                                    <div class="message-container">
+                                        <?php if ($message['user_id'] != $user_id): ?>
+                                            <div class="message-sender">
+                                                <?php echo htmlspecialchars($message['first_name'] . ' ' . $message['last_name']); ?>
+                                                <span class="user-role-badge <?php echo $message['user_type']; ?>">
+                                                    <?php echo ucfirst($message['user_type']); ?>
+                                                </span>
+                                            </div>
+                                        <?php endif; ?>
+                                        
+                                        <div class="message-content <?php echo $message['is_system_message'] ? 'system-message' : ''; ?>">
+                                            <?php echo nl2br(htmlspecialchars($message['message'])); ?>
+                                        </div>
+                                        
+                                        <div class="message-info">
+                                            <span class="message-time">
+                                                <?php echo date('h:i A', strtotime($message['created_at'])); ?>
+                                            </span>
+                                            
+                                            <?php if ($message['reaction_count'] > 0): ?>
+                                                <span class="reaction-count" title="<?php echo $message['reaction_count']; ?> reactions">
+                                                    <i class="fas fa-thumbs-up"></i> <?php echo $message['reaction_count']; ?>
+                                                </span>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </div>
+                
+                <div class="message-input">
+                    <form action="messages.php" method="POST" enctype="multipart/form-data">
+                        <input type="hidden" name="conversation_id" value="<?php echo $selected_conversation['id']; ?>">
+                        <div class="input-container">
+                            <textarea name="message_text" placeholder="Type a message..." rows="1" required></textarea>
+                            <div class="input-actions">
+                                <button type="button" class="btn-icon" title="Attachments" id="attachmentBtn">
+                                    <i class="fas fa-paperclip"></i>
+                                </button>
+                                <input type="file" name="file_attachment" id="fileAttachment" style="display: none;">
+                            </div>
+                        </div>
+                        <button type="submit" name="send_message" class="send-btn">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </form>
+                </div>
+                
+                <div class="conversation-info-panel" id="infoPanel">
+                    <div class="info-header">
+                        <h3>Conversation Info</h3>
+                        <button type="button" class="close-info" id="closeInfoBtn">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="info-content">
+                        <?php if ($selected_conversation['booking_id']): ?>
+                        <div class="info-section">
+                            <h4>Booking Details</h4>
+                            <p><strong>Reference:</strong> <?php echo $selected_conversation['booking_reference']; ?></p>
+                            <?php
+                            // Get booking details
+                            $booking_query = "SELECT b.*, 
+                                            vs.base_price,
+                                            st.service_name,
+                                            v.visa_type,
+                                            c.country_name,
+                                            bs.name as status_name,
+                                            bs.color as status_color
+                                            FROM bookings b
+                                            JOIN visa_services vs ON b.visa_service_id = vs.visa_service_id
+                                            JOIN service_types st ON vs.service_type_id = st.service_type_id
+                                            JOIN visas v ON vs.visa_id = v.visa_id
+                                            JOIN countries c ON v.country_id = c.country_id
+                                            JOIN booking_statuses bs ON b.status_id = bs.id
+                                            WHERE b.id = ?";
+                            $stmt = $conn->prepare($booking_query);
+                            $stmt->bind_param('i', $selected_conversation['booking_id']);
+                            $stmt->execute();
+                            $booking = $stmt->get_result()->fetch_assoc();
+                            $stmt->close();
+                            
+                            if ($booking):
+                            ?>
+                            <p><strong>Service:</strong> <?php echo $booking['service_name']; ?> - <?php echo $booking['visa_type']; ?></p>
+                            <p><strong>Date:</strong> <?php echo date('F j, Y', strtotime($booking['booking_datetime'])); ?></p>
+                            <p><strong>Time:</strong> <?php echo date('h:i A', strtotime($booking['booking_datetime'])); ?></p>
+                            <p><strong>Status:</strong> <span class="status-badge" style="background-color: <?php echo $booking['status_color']; ?>"><?php echo ucfirst($booking['status_name']); ?></span></p>
+                            <?php endif; ?>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <div class="info-section">
+                            <h4>Participants (<?php echo count($conversation_participants); ?>)</h4>
+                            <div class="participant-list">
+                                <?php foreach ($conversation_participants as $participant): ?>
+                                    <div class="participant-item">
+                                        <div class="participant-avatar">
+                                            <?php if (!empty($participant['profile_picture'])): ?>
+                                                <img src="../../uploads/profiles/<?php echo $participant['profile_picture']; ?>" alt="Profile">
+                                            <?php else: ?>
+                                                <div class="initials">
+                                                    <?php echo substr($participant['first_name'], 0, 1) . substr($participant['last_name'], 0, 1); ?>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div class="participant-details">
+                                            <h5><?php echo htmlspecialchars($participant['first_name'] . ' ' . $participant['last_name']); ?></h5>
+                                            <span class="participant-role <?php echo $participant['user_type']; ?>">
+                                                <?php 
+                                                if ($participant['user_type'] === 'member') {
+                                                    echo ucfirst($participant['member_role']);
+                                                } else {
+                                                    echo ucfirst($participant['user_type']);
+                                                }
+                                                ?>
+                                            </span>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                        
+                        <?php if ($selected_conversation['type'] === 'group'): ?>
+                            <div class="info-section">
+                                <h4>Created</h4>
+                                <p><?php echo date('F j, Y', strtotime($selected_conversation['created_at'])); ?></p>
+                            </div>
+                            
+                            <div class="info-actions">
+                                <button type="button" class="btn danger-btn">
+                                    <i class="fas fa-sign-out-alt"></i> Leave Conversation
+                                </button>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            <?php else: ?>
+                <div class="empty-chat-state">
+                    <img src="../../assets/images/chat-icon.png" alt="Chat" class="chat-icon" onerror="this.src='../../assets/images/chat-placeholder.svg'">
+                    <h3>Select a conversation or start a new one</h3>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
+
+<!-- New Conversation Modal -->
+<div class="modal" id="newConversationModal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">New Conversation</h3>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form action="messages.php" method="POST" id="newConversationForm">
+                    <div class="form-group">
+                        <label for="conversation_type">Conversation Type</label>
+                        <div class="type-selector">
+                            <label class="type-option">
+                                <input type="radio" name="conversation_type" value="direct" checked>
+                                <span class="type-label">Direct Message</span>
+                            </label>
+                            <label class="type-option">
+                                <input type="radio" name="conversation_type" value="group">
+                                <span class="type-label">Group Conversation</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group" id="groupTitleContainer" style="display: none;">
+                        <label for="group_title">Group Title*</label>
+                        <input type="text" name="group_title" id="group_title" class="form-control">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="participants">Participants*</label>
+                        <div class="search-participants">
+                            <input type="text" id="participant-search" placeholder="Search users...">
+                        </div>
+                        
+                        <div class="participant-selection">
+                            <?php foreach ($potential_participants as $participant): ?>
+                                <div class="participant-option">
+                                    <label>
+                                        <input type="checkbox" name="participants[]" value="<?php echo $participant['id']; ?>">
+                                        <div class="participant-info">
+                                            <div class="participant-avatar small">
+                                                <?php if (!empty($participant['profile_picture'])): ?>
+                                                    <img src="../../uploads/profiles/<?php echo $participant['profile_picture']; ?>" alt="Profile">
+                                                <?php else: ?>
+                                                    <div class="initials">
+                                                        <?php echo substr($participant['first_name'], 0, 1) . substr($participant['last_name'], 0, 1); ?>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </div>
+                                            <div class="participant-details">
+                                                <h5><?php echo htmlspecialchars($participant['first_name'] . ' ' . $participant['last_name']); ?></h5>
+                                                <span class="participant-role <?php echo $participant['user_type']; ?>">
+                                                    <?php 
+                                                    if (isset($participant['role_type'])) {
+                                                        echo ucfirst($participant['role_type']);
+                                                    } else {
+                                                        echo ucfirst($participant['user_type']);
+                                                    }
+                                                    ?>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </label>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                    
+                    <div class="form-buttons">
+                        <button type="button" class="btn cancel-btn" data-dismiss="modal">Cancel</button>
+                        <button type="submit" name="create_conversation" class="btn submit-btn">Create Conversation</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Task Assignment Modal -->
+<div class="modal" id="taskAssignmentModal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Assign Task</h3>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form action="messages.php" method="POST" id="assignTaskForm">
+                    <input type="hidden" name="conversation_id" value="<?php echo isset($selected_conversation) ? $selected_conversation['id'] : ''; ?>">
+                    
+                    <div class="form-group">
+                        <label for="task_name">Task Name*</label>
+                        <input type="text" name="task_name" id="task_name" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="task_description">Description</label>
+                        <textarea name="task_description" id="task_description" class="form-control" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="task_priority">Priority*</label>
+                            <select name="task_priority" id="task_priority" class="form-control" required>
+                                <option value="normal">Normal</option>
+                                <option value="high">High</option>
+                                <option value="low">Low</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="task_due_date">Due Date</label>
+                            <input type="date" name="task_due_date" id="task_due_date" class="form-control">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Assign To:</label>
+                        <div class="assignee-selection">
+                            <?php if (isset($conversation_participants)): ?>
+                                <?php foreach ($conversation_participants as $participant): ?>
+                                    <?php 
+                                    // Only show team members and consultants as assignable, not applicants
+                                    if ($participant['id'] != $_SESSION['id'] && $participant['user_type'] != 'applicant'): 
+                                    ?>
+                                    <label class="assignee-check-container">
+                                        <input type="checkbox" name="task_assignees[]" value="<?php echo $participant['id']; ?>">
+                                        <span class="checkmark"></span>
+                                        <div class="assignee-info">
+                                            <div class="assignee-name">
+                                                <?php echo htmlspecialchars($participant['first_name'] . ' ' . $participant['last_name']); ?>
+                                            </div>
+                                            <div class="assignee-role <?php echo $participant['user_type']; ?>">
+                                                <?php 
+                                                if ($participant['user_type'] === 'member') {
+                                                    echo ucfirst($participant['member_role']);
+                                                } else {
+                                                    echo ucfirst($participant['user_type']);
+                                                }
+                                                ?>
+                                            </div>
+                                        </div>
+                                    </label>
+                                    <?php endif; ?>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="checkbox-container">
+                            <input type="checkbox" name="task_share_in_chat" id="task_share_in_chat" value="1" checked>
+                            <span class="checkmark"></span>
+                            Share task details in conversation
+                        </label>
+                    </div>
+                    
+                    <div class="form-buttons">
+                        <button type="button" class="btn cancel-btn" data-dismiss="modal">Cancel</button>
+                        <button type="submit" name="assign_task" class="btn submit-btn">Assign Task</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Document Request Modal -->
+<div class="modal" id="documentRequestModal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Request Document</h3>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form action="messages.php" method="POST" id="requestDocumentForm">
+                    <input type="hidden" name="conversation_id" value="<?php echo isset($selected_conversation) ? $selected_conversation['id'] : ''; ?>">
+                    
+                    <div class="form-group">
+                        <label for="document_title">Document Title*</label>
+                        <input type="text" name="document_title" id="document_title" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="document_description">Description</label>
+                        <textarea name="document_description" id="document_description" class="form-control" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="document_type">Document Type*</label>
+                        <select name="document_type" id="document_type" class="form-control" required>
+                            <?php
+                            // Get document types from database with organization filter
+                            $doc_types_query = "SELECT id, name FROM document_types 
+                                              WHERE is_active = 1 
+                                              AND (organization_id = ? OR is_global = 1)
+                                              ORDER BY name";
+                            $doc_types_stmt = $conn->prepare($doc_types_query);
+                            $doc_types_stmt->bind_param('i', $organization_id);
+                            $doc_types_stmt->execute();
+                            $doc_types_result = $doc_types_stmt->get_result();
+                            
+                            while ($type = $doc_types_result->fetch_assoc()): 
+                            ?>
+                                <option value="<?php echo $type['id']; ?>"><?php echo htmlspecialchars($type['name']); ?></option>
+                            <?php 
+                            endwhile;
+                            $doc_types_stmt->close();
+                            ?>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Request From:</label>
+                        <div class="requestee-selection">
+                            <?php if (isset($conversation_participants)): ?>
+                                <?php foreach ($conversation_participants as $participant): ?>
+                                    <?php if ($participant['id'] != $_SESSION['id']): ?>
+                                    <label class="assignee-check-container">
+                                        <input type="checkbox" name="document_requestees[]" value="<?php echo $participant['id']; ?>">
+                                        <span class="checkmark"></span>
+                                        <div class="assignee-info">
+                                            <div class="assignee-name">
+                                                <?php echo htmlspecialchars($participant['first_name'] . ' ' . $participant['last_name']); ?>
+                                            </div>
+                                            <div class="assignee-role <?php echo $participant['user_type']; ?>">
+                                                <?php 
+                                                if ($participant['user_type'] === 'member') {
+                                                    echo ucfirst($participant['member_role']);
+                                                } else {
+                                                    echo ucfirst($participant['user_type']);
+                                                }
+                                                ?>
+                                            </div>
+                                        </div>
+                                    </label>
+                                    <?php endif; ?>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="document_due_date">Required By</label>
+                        <input type="date" name="document_due_date" id="document_due_date" class="form-control">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="checkbox-container">
+                            <input type="checkbox" name="document_share_in_chat" id="document_share_in_chat" value="1" checked>
+                            <span class="checkmark"></span>
+                            Share request details in conversation
+                        </label>
+                    </div>
+                    
+                    <div class="form-buttons">
+                        <button type="button" class="btn cancel-btn" data-dismiss="modal">Cancel</button>
+                        <button type="submit" name="request_document" class="btn submit-btn">Request Document</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Attachment Options Popup -->
+<div class="attachment-options" id="attachmentOptions">
+    <div class="attachment-option" id="attachFileOption">
+        <i class="fas fa-file"></i> Attach File
+    </div>
+    <div class="attachment-option" id="assignTaskOption">
+        <i class="fas fa-tasks"></i> Assign Task
+    </div>
+    <div class="attachment-option" id="requestDocumentOption">
+        <i class="fas fa-file-alt"></i> Request Document
+    </div>
+</div>
+
+<style>
+:root {
+    --primary-color: #042167;
+    --secondary-color: #858796;
+    --success-color: #1cc88a;
+    --danger-color: #e74a3b;
+    --light-color: #f8f9fc;
+    --dark-color: #5a5c69;
+    --border-color: #e3e6f0;
+    --message-outgoing-bg: #e1f0ff;
+    --message-incoming-bg: #f1f3f8;
+    --system-message-bg: #f8f9fc;
+    --consultant-color: #4e73df;
+    --applicant-color: #f6c23e;
+    --member-color: #36b9cc;
+    --admin-color: #1cc88a;
+}
+
+/* Additional styles for organization-related elements */
+.booking-badge {
+    background-color: var(--primary-color);
+    color: white;
+    font-size: 12px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    margin-left: 8px;
+    font-weight: normal;
+}
+
+.booking-ref {
+    color: var(--primary-color);
+    font-weight: 600;
+    margin-right: 4px;
+}
+
+.user-role-badge {
+    font-size: 10px;
+    padding: 1px 5px;
+    border-radius: 10px;
+    margin-left: 5px;
+    color: white;
+    font-weight: normal;
+}
+
+.user-role-badge.consultant,
+.participant-role.consultant {
+    background-color: var(--consultant-color);
+}
+
+.user-role-badge.applicant,
+.participant-role.applicant {
+    background-color: var(--applicant-color);
+    color: #212529;
+}
+
+.user-role-badge.member,
+.participant-role.member {
+    background-color: var(--member-color);
+}
+
+.user-role-badge.admin,
+.participant-role.admin {
+    background-color: var(--admin-color);
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    color: white;
+    font-size: 12px;
+}
+
+/* Existing styles from the original file */
+.content-wrapper {
+    height: calc(100vh - 70px);
+}
+
+.messaging-container {
+    display: flex;
+    height: 100%;
+    background-color: white;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+/* Conversations Sidebar */
+.conversations-sidebar {
+    width: 320px;
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    background-color: white;
+}
+
+.conversations-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.conversations-header h1 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--dark-color);
+}
+
+.btn-new-conversation {
+    background-color: #4e73df;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 12px;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.btn-new-conversation:hover {
+    background-color: #375ad3;
+}
+
+.search-bar {
+    padding: 10px 15px;
+    position: relative;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.search-bar input {
+    width: 100%;
+    padding: 8px 30px 8px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.search-bar i {
+    position: absolute;
+    right: 25px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.conversations-list {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.loading-conversations {
+    padding: 20px;
+    text-align: center;
+    color: var(--secondary-color);
+    font-size: 14px;
+}
+
+.conversation-item {
+    display: flex;
+    padding: 12px 15px;
+    text-decoration: none;
+    color: var(--dark-color);
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color 0.2s;
+    gap: 12px;
+}
+
+.conversation-item:hover {
+    background-color: #f8f9fc;
+}
+
+.conversation-item.active {
+    background-color: #f0f2f8;
+    border-left: 3px solid var(--primary-color);
+}
+
+.conversation-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #4e73df;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.conversation-avatar.large {
+    width: 48px;
+    height: 48px;
+    font-size: 18px;
+}
+
+.conversation-avatar.small {
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
+}
+
+.group-avatar {
+    background-color: #4e73df;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.conversation-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.conversation-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.conversation-header h4 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--dark-color);
+}
+
+.conversation-time {
+    font-size: 12px;
+    color: var(--secondary-color);
+    white-space: nowrap;
+}
+
+.conversation-preview {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.conversation-preview p {
+    margin: 0;
+    font-size: 13px;
+    color: var(--secondary-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.unread-badge {
+    min-width: 20px;
+    height: 20px;
+    border-radius: 10px;
+    background-color: #4e73df;
+    color: white;
+    font-size: 11px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 6px;
+}
+
+/* Messages Area */
+.messages-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.message-header {
+    padding: 15px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.conversation-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.conversation-info h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--dark-color);
+}
+
+.conversation-info p {
+    margin: 3px 0 0;
+    font-size: 13px;
+    color: var(--secondary-color);
+}
+
+.conversation-actions {
+    display: flex;
+    gap: 5px;
+}
+
+.btn-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background-color: transparent;
+    color: var(--secondary-color);
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+}
+
+.btn-icon:hover {
+    background-color: #f0f2f8;
+    color: var(--primary-color);
+}
+
+.message-content {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    background-color: #f8f9fc;
+}
+
+.message-date-divider {
+    text-align: center;
+    margin: 15px 0;
+    position: relative;
+}
+
+.message-date-divider::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 100%;
+    height: 1px;
+    background-color: var(--border-color);
+    z-index: 1;
+}
+
+.message-date-divider span {
+    background-color: #f8f9fc;
+    padding: 0 10px;
+    font-size: 12px;
+    color: var(--secondary-color);
+    position: relative;
+    z-index: 2;
+}
+
+.message-bubble {
+    display: flex;
+    margin-bottom: 10px;
+    gap: 10px;
+    max-width: 70%;
+}
+
+.message-bubble.incoming {
+    align-self: flex-start;
+}
+
+.message-bubble.outgoing {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+}
+
+.message-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: #4e73df;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 12px;
+    flex-shrink: 0;
+}
+.message-avatar img {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+.participant-avatar img {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.message-container {
+    display: flex;
+    flex-direction: column;
+}
+
+.message-sender {
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: var(--dark-color);
+    display: flex;
+    align-items: center;
+}
+
+.message-bubble .message-content {
+    padding: 12px 15px;
+    border-radius: 18px;
+    background-color: white;
+    font-size: 14px;
+    line-height: 1.4;
+    word-break: break-word;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    width: auto;
+    flex: 0;
+    height: auto;
+    overflow: visible;
+}
+
+.message-bubble.outgoing .message-content {
+    background-color: #4e73df;
+    color: white;
+}
+
+.system-message {
+    background-color: var(--system-message-bg) !important;
+    font-size: 12px !important;
+    font-style: italic !important;
+    color: var(--secondary-color) !important;
+    text-align: center !important;
+    border: 1px dashed var(--border-color) !important;
+}
+
+.message-info {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 5px;
+    margin-top: 4px;
+}
+
+.message-time {
+    font-size: 11px;
+    color: var(--secondary-color);
+}
+
+.message-bubble.outgoing .message-time {
+    color: #e1e1e1;
+}
+
+.reaction-count {
+    font-size: 11px;
+    color: var(--primary-color);
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.message-input {
+    padding: 15px;
+    border-top: 1px solid var(--border-color);
+    background-color: white;
+}
+
+.message-input form {
+    display: flex;
+    gap: 10px;
+}
+
+.input-container {
+    flex: 1;
+    border: 1px solid var(--border-color);
+    border-radius: 24px;
+    padding: 8px 15px;
+    display: flex;
+    align-items: center;
+    background-color: #f8f9fc;
+}
+
+.input-container textarea {
+    flex: 1;
+    border: none;
+    resize: none;
+    height: 24px;
+    max-height: 80px;
+    font-size: 14px;
+    outline: none;
+    padding: 0;
+    font-family: inherit;
+    background-color: transparent;
+}
+
+.input-actions {
+    display: flex;
+    gap: 5px;
+}
+
+.send-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #4e73df;
+    color: white;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+}
+
+.send-btn:hover {
+    background-color: #375ad3;
+}
+
+.empty-chat-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    text-align: center;
+    background-color: #f8f9fc;
+}
+
+.chat-icon {
+    width: 100px;
+    height: 100px;
+    opacity: 0.6;
+    margin-bottom: 20px;
+}
+
+.empty-chat-state h3 {
+    margin: 0;
+    color: var(--secondary-color);
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.empty-chat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--secondary-color);
+    text-align: center;
+}
+
+.empty-chat i {
+    font-size: 36px;
+    margin-bottom: 10px;
+    opacity: 0.5;
+}
+
+/* Conversation Info Panel */
+.conversation-info-panel {
+    position: absolute;
+    top: 0;
+    right: -300px;
+    width: 300px;
+    height: 100%;
+    background-color: white;
+    border-left: 1px solid var(--border-color);
+    transition: right 0.3s;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.05);
+}
+
+.conversation-info-panel.open {
+    right: 0;
+}
+
+.info-header {
+    padding: 15px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.info-header h3 {
+    margin: 0;
+    font-size: 16px;
+    color: var(--dark-color);
+    font-weight: 600;
+}
+
+.close-info {
+    background: none;
+    border: none;
+    font-size: 16px;
+    color: var(--secondary-color);
+    cursor: pointer;
+}
+
+.info-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 15px;
+}
+
+.info-section {
+    margin-bottom: 20px;
+}
+
+.info-section h4 {
+    margin: 0 0 10px 0;
+    font-size: 14px;
+    color: var(--secondary-color);
+    font-weight: 500;
+}
+
+.participant-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.participant-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.participant-details h5 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--dark-color);
+}
+
+.participant-role {
+    font-size: 12px;
+    color: white;
+    padding: 1px 5px;
+    border-radius: 10px;
+    display: inline-block;
+    margin-top: 2px;
+}
+
+.info-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.danger-btn {
+    background-color: var(--danger-color);
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    font-size: 14px;
+    transition: background-color 0.2s;
+}
+
+.danger-btn:hover {
+    background-color: #d44235;
+}
+
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    overflow: auto;
+}
+
+.modal-dialog {
+    margin: 60px auto;
+    max-width: 500px;
+    width: calc(100% - 40px);
+}
+
+.modal-content {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-title {
+    margin: 0;
+    color: var(--dark-color);
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.close {
+    background: none;
+    border: none;
+    font-size: 22px;
+    cursor: pointer;
+    color: var(--secondary-color);
+    line-height: 1;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: var(--dark-color);
+    font-size: 14px;
+}
+
+.form-control {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.type-selector {
+    display: flex;
+    gap: 15px;
+}
+
+.type-option {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.type-option input {
+    margin-bottom: 8px;
+}
+
+.type-option:has(input:checked) {
+    border-color: #4e73df;
+    background-color: rgba(78, 115, 223, 0.05);
+}
+
+.search-participants {
+    margin-bottom: 10px;
+}
+
+.search-participants input {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.participant-selection {
+    max-height: 250px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+}
+
+.participant-option {
+    padding: 10px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.participant-option:last-child {
+    border-bottom: none;
+}
+
+.participant-option label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    margin: 0;
+    width: 100%;
+}
+
+.participant-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+}
+
+.form-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.cancel-btn {
+    background-color: white;
+    color: var(--secondary-color);
+    border: 1px solid var(--border-color);
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.submit-btn {
+    background-color: #4e73df;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.submit-btn:hover {
+    background-color: #375ad3;
+}
+
+.alert {
+    padding: 12px 15px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+    font-size: 14px;
+}
+
+.alert-danger {
+    background-color: rgba(231, 74, 59, 0.1);
+    color: var(--danger-color);
+    border: 1px solid rgba(231, 74, 59, 0.2);
+}
+
+@media (max-width: 768px) {
+    .messaging-container {
+        flex-direction: column;
+    }
+    
+    .conversations-sidebar {
+        width: 100%;
+        height: 300px;
+    }
+    
+    .message-bubble {
+        max-width: 85%;
+    }
+}
+
+.attachment-options {
+    position: absolute;
+    bottom: 60px;
+    left: 15px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    z-index: 10;
+    display: none;
+    width: 180px;
+    overflow: hidden;
+}
+
+.attachment-option {
+    padding: 12px 15px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.attachment-option:hover {
+    background-color: var(--light-color);
+}
+
+.attachment-option i {
+    width: 16px;
+    text-align: center;
+    color: var(--primary-color);
+}
+
+.assignee-selection, .requestee-selection {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 5px;
+    margin-top: 5px;
+}
+
+.assignee-check-container {
+    margin-bottom: 5px;
+    padding: 8px 8px 8px 35px;
+    background-color: var(--light-color);
+    border-radius: 4px;
+}
+
+.form-row {
+    display: flex;
+    gap: 15px;
+}
+
+.form-row .form-group {
+    flex: 1;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // New conversation modal
+    const newConversationBtn = document.getElementById('newConversationBtn');
+    const newConversationModal = document.getElementById('newConversationModal');
+    const closeModalBtns = document.querySelectorAll('[data-dismiss="modal"]');
+    
+    if (newConversationBtn) {
+        newConversationBtn.addEventListener('click', function() {
+            newConversationModal.style.display = 'block';
+        });
+    }
+    
+    closeModalBtns.forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const modal = this.closest('.modal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        });
+    });
+    
+    // Close modal when clicking outside
+    window.addEventListener('click', function(event) {
+        if (event.target.classList.contains('modal')) {
+            event.target.style.display = 'none';
+        }
+    });
+    
+    // Toggle conversation type
+    const conversationTypeRadios = document.querySelectorAll('input[name="conversation_type"]');
+    const groupTitleContainer = document.getElementById('groupTitleContainer');
+    
+    conversationTypeRadios.forEach(function(radio) {
+        radio.addEventListener('change', function() {
+            if (this.value === 'group') {
+                groupTitleContainer.style.display = 'block';
+                document.getElementById('group_title').setAttribute('required', 'required');
+            } else {
+                groupTitleContainer.style.display = 'none';
+                document.getElementById('group_title').removeAttribute('required');
+            }
+        });
+    });
+    
+    // Filter participants
+    const participantSearch = document.getElementById('participant-search');
+    if (participantSearch) {
+        participantSearch.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const options = document.querySelectorAll('.participant-option');
+            
+            options.forEach(function(option) {
+                const name = option.querySelector('h5').textContent.toLowerCase();
+                const role = option.querySelector('.participant-role').textContent.toLowerCase();
+                if (name.includes(searchTerm) || role.includes(searchTerm)) {
+                    option.style.display = 'block';
+                } else {
+                    option.style.display = 'none';
+                }
+            });
+        });
+    }
+    
+    // Toggle conversation info panel
+    const infoBtn = document.getElementById('infoBtn');
+    const infoPanel = document.getElementById('infoPanel');
+    const closeInfoBtn = document.getElementById('closeInfoBtn');
+    
+    if (infoBtn && infoPanel) {
+        infoBtn.addEventListener('click', function() {
+            infoPanel.classList.toggle('open');
+        });
+        
+        closeInfoBtn.addEventListener('click', function() {
+            infoPanel.classList.remove('open');
+        });
+    }
+    
+    // Filter conversations
+    const conversationSearch = document.getElementById('conversation-search');
+    if (conversationSearch) {
+        conversationSearch.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const items = document.querySelectorAll('.conversation-item');
+            
+            items.forEach(function(item) {
+                const name = item.querySelector('h4').textContent.toLowerCase();
+                const message = item.querySelector('.conversation-preview p').textContent.toLowerCase();
+                
+                if (name.includes(searchTerm) || message.includes(searchTerm)) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
+    }
+    
+    // Auto-resize textarea
+    const messageTextarea = document.querySelector('.message-input textarea');
+    if (messageTextarea) {
+        messageTextarea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+        });
+    }
+    
+    // Scroll to bottom of messages
+    const messageContent = document.querySelector('.message-content');
+    if (messageContent) {
+        messageContent.scrollTop = messageContent.scrollHeight;
+    }
+
+    // Handle attachment button and popup
+    const attachmentBtn = document.getElementById('attachmentBtn');
+    const attachmentOptions = document.getElementById('attachmentOptions');
+    const attachFileOption = document.getElementById('attachFileOption');
+    const assignTaskOption = document.getElementById('assignTaskOption');
+    const requestDocumentOption = document.getElementById('requestDocumentOption');
+    const fileAttachment = document.getElementById('fileAttachment');
+
+    // Attachment options popup
+    if (attachmentBtn) {
+        attachmentBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (attachmentOptions.style.display === 'block') {
+                attachmentOptions.style.display = 'none';
+            } else {
+                attachmentOptions.style.display = 'block';
+            }
+        });
+    }
+
+    // Close attachment options when clicking outside
+    document.addEventListener('click', function(e) {
+        if (attachmentOptions && attachmentOptions.style.display === 'block') {
+            if (!attachmentOptions.contains(e.target) && e.target !== attachmentBtn) {
+                attachmentOptions.style.display = 'none';
+            }
+        }
+    });
+
+    // Attach file option
+    if (attachFileOption) {
+        attachFileOption.addEventListener('click', function() {
+            fileAttachment.click();
+            attachmentOptions.style.display = 'none';
+        });
+    }
+
+    // Task assignment option
+    if (assignTaskOption) {
+        assignTaskOption.addEventListener('click', function() {
+            document.getElementById('taskAssignmentModal').style.display = 'block';
+            attachmentOptions.style.display = 'none';
+        });
+    }
+
+    // Document request option
+    if (requestDocumentOption) {
+        requestDocumentOption.addEventListener('click', function() {
+            document.getElementById('documentRequestModal').style.display = 'block';
+            attachmentOptions.style.display = 'none';
+        });
+    }
+
+    // File input change event
+    if (fileAttachment) {
+        fileAttachment.addEventListener('change', function() {
+            if (this.files.length > 0) {
+                // Show selected file name
+                const fileName = this.files[0].name;
+                const messageTextarea = document.querySelector('.message-input textarea');
+                if (messageTextarea.value) {
+                    messageTextarea.value += ' [Attaching: ' + fileName + ']';
+                } else {
+                    messageTextarea.value = '[Attaching: ' + fileName + ']';
+                }
+            }
+        });
+    }
+
+    // Close modals for task and document
+    document.querySelectorAll('#taskAssignmentModal .close, #documentRequestModal .close').forEach(function(element) {
+        element.addEventListener('click', function() {
+            const modal = this.closest('.modal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        });
+    });
+
+    // Cancel buttons in modals
+    document.querySelectorAll('#taskAssignmentModal .cancel-btn, #documentRequestModal .cancel-btn').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const modal = this.closest('.modal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        });
+    });
+});
+</script>
+
+<?php
+// End output buffering and send content to browser
+ob_end_flush();
+?>
+
+<?php require_once 'includes/footer.php'; ?>

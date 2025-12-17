@@ -1,0 +1,25 @@
+/* Responsive styles for advantage cards */
+@media (max-width: 768px) {
+    /* Make advantage grid single column */
+    .advantage-grid {
+        grid-template-columns: 1fr !important;
+    }
+    
+    .advantage-card {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+    }
+    
+    .advantage-image {
+        margin-bottom: 1.5rem !important;
+    }
+    
+    .advantage-content {
+        align-items: flex-start !important;
+    }
+    
+    .advantage-content h3,
+    .advantage-content p {
+        text-align: left !important;
+    }
+}

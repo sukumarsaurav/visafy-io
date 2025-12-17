@@ -1,0 +1,364 @@
+{
+    "meta": {
+      "analyzed_url": "https://www.hubspot.com/?hubs_content=www.hubspot.com/products/marketing&hubs_content-cta=HubSpot",
+      "analysis_date": "2025-08-06",
+      "page_title": "HubSpot | Software & Tools for your Business - Homepage"
+    },
+    "typography": {
+      "font_families": {
+        "primary": "Averta, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif",
+        "secondary": "Averta-Bold, -apple-system, BlinkMacSystemFont, sans-serif",
+        "monospace": "Monaco, 'Cascadia Code', 'Roboto Mono', Courier, monospace"
+      },
+      "font_sizes": {
+        "hero_heading": {
+          "mobile": "2rem (32px)",
+          "tablet": "2.5rem (40px)", 
+          "desktop": "3.5rem (56px)",
+          "xl_desktop": "4rem (64px)"
+        },
+        "section_heading": {
+          "mobile": "1.5rem (24px)",
+          "tablet": "2rem (32px)",
+          "desktop": "2.5rem (40px)"
+        },
+        "subsection_heading": {
+          "mobile": "1.25rem (20px)",
+          "tablet": "1.5rem (24px)",
+          "desktop": "1.75rem (28px)"
+        },
+        "body_large": {
+          "mobile": "1.125rem (18px)",
+          "tablet": "1.25rem (20px)",
+          "desktop": "1.375rem (22px)"
+        },
+        "body_regular": {
+          "mobile": "1rem (16px)",
+          "tablet": "1rem (16px)",
+          "desktop": "1.125rem (18px)"
+        },
+        "body_small": {
+          "mobile": "0.875rem (14px)",
+          "tablet": "0.875rem (14px)",
+          "desktop": "1rem (16px)"
+        },
+        "caption": {
+          "mobile": "0.75rem (12px)",
+          "tablet": "0.75rem (12px)",
+          "desktop": "0.875rem (14px)"
+        }
+      },
+      "line_heights": {
+        "headings": "1.2",
+        "body": "1.5",
+        "caption": "1.4"
+      },
+      "font_weights": {
+        "light": 300,
+        "regular": 400,
+        "medium": 500,
+        "semibold": 600,
+        "bold": 700
+      }
+    },
+    "spacing": {
+      "padding": {
+        "container": {
+          "mobile": "1rem (16px)",
+          "tablet": "2rem (32px)",
+          "desktop": "3rem (48px)",
+          "xl_desktop": "4rem (64px)"
+        },
+        "section": {
+          "mobile": "3rem (48px)",
+          "tablet": "4rem (64px)",
+          "desktop": "6rem (96px)",
+          "xl_desktop": "8rem (128px)"
+        },
+        "card": {
+          "mobile": "1.5rem (24px)",
+          "tablet": "2rem (32px)",
+          "desktop": "2.5rem (40px)"
+        },
+        "button": {
+          "small": "0.75rem 1.5rem (12px 24px)",
+          "medium": "1rem 2rem (16px 32px)",
+          "large": "1.25rem 2.5rem (20px 40px)"
+        }
+      },
+      "margins": {
+        "section_bottom": {
+          "mobile": "2rem (32px)",
+          "tablet": "3rem (48px)",
+          "desktop": "4rem (64px)"
+        },
+        "element": {
+          "small": "0.5rem (8px)",
+          "medium": "1rem (16px)",
+          "large": "1.5rem (24px)",
+          "xlarge": "2rem (32px)"
+        }
+      },
+      "grid": {
+        "gutter": {
+          "mobile": "1rem (16px)",
+          "tablet": "1.5rem (24px)",
+          "desktop": "2rem (32px)"
+        },
+        "max_width": "1200px",
+        "breakpoints": {
+          "mobile": "320px",
+          "tablet": "768px",
+          "desktop": "1024px",
+          "xl_desktop": "1440px"
+        }
+      }
+    },
+    "colors": {
+      "primary": {
+        "orange": {
+          "50": "#FFF4ED",
+          "100": "#FFE6D5",
+          "200": "#FFCAA7",
+          "300": "#FFA574",
+          "400": "#FF7A39",
+          "500": "#FF5C28",
+          "600": "#F04438",
+          "700": "#D92D20",
+          "800": "#B42318",
+          "900": "#912018"
+        },
+        "blue": {
+          "50": "#F0F9FF",
+          "100": "#E0F2FE",
+          "200": "#B9E6FE",
+          "300": "#7CD4FD",
+          "400": "#36BFFA",
+          "500": "#0BA5EC",
+          "600": "#0086C9",
+          "700": "#026AA2",
+          "800": "#065986",
+          "900": "#0B4A6F"
+        }
+      },
+      "neutral": {
+        "white": "#FFFFFF",
+        "gray": {
+          "50": "#F9FAFB",
+          "100": "#F3F4F6",
+          "200": "#E5E7EB",
+          "300": "#D1D5DB",
+          "400": "#9CA3AF",
+          "500": "#6B7280",
+          "600": "#4B5563",
+          "700": "#374151",
+          "800": "#1F2937",
+          "900": "#111827"
+        },
+        "black": "#000000"
+      },
+      "semantic": {
+        "success": "#10B981",
+        "warning": "#F59E0B",
+        "error": "#EF4444",
+        "info": "#3B82F6"
+      }
+    },
+    "components": {
+      "buttons": {
+        "primary": {
+          "background": "#FF5C28",
+          "color": "#FFFFFF",
+          "border": "none",
+          "border_radius": "6px",
+          "font_weight": 600,
+          "text_transform": "none",
+          "transition": "all 0.2s ease",
+          "hover": {
+            "background": "#F04438",
+            "transform": "translateY(-1px)"
+          },
+          "focus": {
+            "outline": "2px solid #FF5C28",
+            "outline_offset": "2px"
+          }
+        },
+        "secondary": {
+          "background": "transparent",
+          "color": "#FF5C28", 
+          "border": "2px solid #FF5C28",
+          "border_radius": "6px",
+          "font_weight": 600,
+          "hover": {
+            "background": "#FF5C28",
+            "color": "#FFFFFF"
+          }
+        },
+        "ghost": {
+          "background": "transparent",
+          "color": "#374151",
+          "border": "none",
+          "font_weight": 500,
+          "hover": {
+            "color": "#FF5C28",
+            "background": "#F9FAFB"
+          }
+        }
+      },
+      "cards": {
+        "default": {
+          "background": "#FFFFFF",
+          "border": "1px solid #E5E7EB",
+          "border_radius": "12px",
+          "box_shadow": "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)",
+          "padding": {
+            "mobile": "1.5rem (24px)",
+            "desktop": "2rem (32px)"
+          },
+          "hover": {
+            "box_shadow": "0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+            "transform": "translateY(-2px)"
+          }
+        },
+        "featured": {
+          "background": "linear-gradient(135deg, #FF5C28 0%, #F04438 100%)",
+          "color": "#FFFFFF",
+          "border": "none",
+          "border_radius": "16px",
+          "box_shadow": "0 20px 25px -5px rgba(255, 92, 40, 0.25), 0 10px 10px -5px rgba(255, 92, 40, 0.1)"
+        },
+        "glass": {
+          "background": "rgba(255, 255, 255, 0.8)",
+          "backdrop_filter": "blur(10px)",
+          "border": "1px solid rgba(255, 255, 255, 0.2)",
+          "border_radius": "16px"
+        }
+      },
+      "navigation": {
+        "header": {
+          "background": "#FFFFFF",
+          "border_bottom": "1px solid #E5E7EB",
+          "padding": "1rem 0",
+          "backdrop_filter": "blur(10px)",
+          "position": "sticky",
+          "z_index": 50
+        },
+        "logo": {
+          "height": "32px",
+          "width": "auto"
+        },
+        "menu_items": {
+          "color": "#374151",
+          "font_weight": 500,
+          "padding": "0.5rem 1rem",
+          "border_radius": "6px",
+          "hover": {
+            "color": "#FF5C28",
+            "background": "#F9FAFB"
+          }
+        }
+      },
+      "hero_section": {
+        "background": "linear-gradient(135deg, #F9FAFB 0%, #FFFFFF 100%)",
+        "padding": {
+          "mobile": "4rem 0",
+          "desktop": "8rem 0"
+        },
+        "text_alignment": "center",
+        "max_width": "800px"
+      },
+      "feature_sections": {
+        "background": "#FFFFFF",
+        "padding": {
+          "mobile": "3rem 0",
+          "desktop": "6rem 0"
+        },
+        "alternating_backgrounds": ["#FFFFFF", "#F9FAFB"]
+      },
+      "testimonials": {
+        "background": "#F9FAFB",
+        "padding": {
+          "mobile": "3rem 0",
+          "desktop": "5rem 0"
+        },
+        "card_style": "glass"
+      },
+      "cta_sections": {
+        "background": "linear-gradient(135deg, #FF5C28 0%, #F04438 100%)",
+        "color": "#FFFFFF",
+        "padding": {
+          "mobile": "3rem 0",
+          "desktop": "5rem 0"
+        },
+        "border_radius": "16px",
+        "text_alignment": "center"
+      }
+    },
+    "animations": {
+      "transitions": {
+        "default": "all 0.2s ease",
+        "slow": "all 0.3s ease",
+        "bounce": "all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55)"
+      },
+      "hover_effects": {
+        "lift": "translateY(-2px)",
+        "scale": "scale(1.02)",
+        "glow": "box-shadow: 0 0 20px rgba(255, 92, 40, 0.3)"
+      },
+      "loading_states": {
+        "skeleton": {
+          "background": "linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)",
+          "animation": "loading 1.5s infinite"
+        },
+        "spinner": {
+          "border": "2px solid #E5E7EB",
+          "border_top": "2px solid #FF5C28",
+          "border_radius": "50%",
+          "animation": "spin 1s linear infinite"
+        }
+      }
+    },
+    "responsive_behavior": {
+      "mobile_first": true,
+      "container_behavior": {
+        "mobile": "full-width with padding",
+        "tablet": "max-width with centering",
+        "desktop": "fixed max-width with side margins"
+      },
+      "typography_scaling": {
+        "method": "fluid typography using clamp()",
+        "base_scale": "1.125 (major second)",
+        "mobile_scale": "1.067 (minor second)"
+      },
+      "navigation": {
+        "mobile": "hamburger menu with slide-out drawer",
+        "desktop": "horizontal menu with dropdowns"
+      },
+      "grid_behavior": {
+        "mobile": "single column",
+        "tablet": "2-3 columns",
+        "desktop": "3-4 columns"
+      }
+    },
+    "accessibility": {
+      "focus_indicators": {
+        "outline": "2px solid #FF5C28",
+        "outline_offset": "2px",
+        "border_radius": "4px"
+      },
+      "color_contrast": {
+        "text_on_white": "4.5:1 minimum",
+        "text_on_colored": "7:1 for AA compliance"
+      },
+      "font_sizes": {
+        "minimum": "16px on mobile",
+        "scalable": "uses rem units"
+      }
+    },
+    "performance": {
+      "css_methodology": "Utility-first with component classes",
+      "critical_css": "Inlined for above-the-fold content",
+      "font_loading": "font-display: swap",
+      "image_optimization": "WebP with fallbacks, lazy loading"
+    }
+  }
